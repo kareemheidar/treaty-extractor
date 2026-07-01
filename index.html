@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UC-4 Team Build Guide · Treaty Extractor in Retool</title>
+<style>
+  :root{
+    --bg:#f6f8fc; --bg2:#eef2f9; --card:#ffffff; --card2:#f3f6fc;
+    --ink:#2d3344; --muted:#707a90; --line:#e4e9f2;
+    --brand:#5e7fc4; --brand2:#8a7fc7; --accent:#3fa593; --warn:#cc934a; --danger:#d4707a;
+    --ai:#8b72c9; --ai-bg:#f1edfb;
+    --radius:14px; --maxw:1080px;
+    --shadow:0 1px 2px rgba(45,62,110,.04),0 6px 20px rgba(45,62,110,.05);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:linear-gradient(180deg,#f3f6fc,#f7f9fd 40%,#f6f8fc);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--brand)}
+  .wrap{display:flex;max-width:1320px;margin:0 auto;gap:0}
+  nav.side{position:sticky;top:0;height:100vh;width:260px;flex:0 0 260px;overflow-y:auto;
+    background:rgba(247,249,253,.9);backdrop-filter:blur(8px);border-right:1px solid var(--line);padding:18px 12px}
+  nav.side h1{font-size:14px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;margin:0 8px 4px}
+  nav.side .uc{font-size:19px;font-weight:800;margin:0 8px 16px;background:linear-gradient(90deg,var(--brand),var(--ai));-webkit-background-clip:text;background-clip:text;color:transparent}
+  nav.side a{display:block;padding:8px 10px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:14.5px;margin-bottom:2px;transition:.15s}
+  nav.side a:hover{background:var(--card);color:var(--ink)}
+  nav.side a.active{background:linear-gradient(90deg,rgba(94,127,196,.16),rgba(139,114,201,.12));color:var(--ink);font-weight:600}
+  nav.side a .n{display:inline-block;width:22px;color:var(--brand);font-weight:700}
+  main{flex:1;min-width:0;padding:36px clamp(18px,4vw,56px);max-width:var(--maxw);margin:0 auto}
+  section{margin-bottom:54px;scroll-margin-top:20px}
+  .eyebrow{color:var(--ai);font-weight:700;font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase}
+  h2{font-size:28px;margin:6px 0 14px;line-height:1.2;color:#222838}
+  h3{font-size:19px;margin:26px 0 10px;color:#222838}
+  h4{font-size:15.5px;margin:18px 0 6px;color:var(--brand)}
+  p{margin:10px 0}
+  .lead{font-size:17.5px;color:#454d61}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:14px 0;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:880px){.g2,.g3{grid-template-columns:1fr}.wrap{flex-direction:column}nav.side{position:relative;width:100%;height:auto;flex:none;display:flex;flex-wrap:wrap;gap:4px}nav.side a{flex:1 1 auto}}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line)}
+  .pill.ai{background:var(--ai-bg);color:#6f57b0;border-color:#ddd2f3}
+  .pill.warn{background:rgba(204,147,74,.12);color:#a9762f;border-color:#ecd9bd}
+  .pill.ok{background:rgba(63,165,147,.12);color:#2f8473;border-color:#c3e6de}
+  .pill.core{background:rgba(94,127,196,.12);color:#4a64b0;border-color:#d2ddf2}
+  .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .hero{background:linear-gradient(135deg,#eef2fb,#f3eefb);border:1px solid var(--line);border-radius:18px;padding:30px 28px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .kv{display:grid;grid-template-columns:210px 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .kv>div{padding:11px 14px;border-bottom:1px solid var(--line)}
+  .kv>div:nth-child(odd){background:var(--card2);font-weight:600;color:#3a4256}
+  .kv>div:nth-child(even){background:var(--card)}
+  .kv>div:nth-last-child(-n+2){border-bottom:none}
+  @media(max-width:680px){.kv{grid-template-columns:1fr}.kv>div:nth-child(odd){border-bottom:none}}
+  ul.clean{list-style:none;padding-left:0;margin:10px 0}
+  ul.clean li{padding:7px 0 7px 26px;position:relative;border-bottom:1px solid rgba(228,233,242,.7)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li:before{content:"";position:absolute;left:4px;top:15px;width:7px;height:7px;border-radius:50%;background:var(--brand)}
+  ul.clean li.x:before{background:var(--danger)}
+  ul.clean li.ok:before{background:var(--accent)}
+  ol.steps{padding-left:22px;margin:10px 0}
+  ol.steps li{padding:5px 0}
+  ol.steps li::marker{color:var(--brand);font-weight:700}
+  .callout{border-left:3px solid var(--brand);background:var(--card2);padding:14px 18px;border-radius:0 12px 12px 0;margin:16px 0}
+  .callout.ai{border-color:var(--ai);background:linear-gradient(90deg,var(--ai-bg),var(--card))}
+  .callout.warn{border-color:var(--warn);background:rgba(204,147,74,.08)}
+  .callout.ok{border-color:var(--accent);background:rgba(63,165,147,.08)}
+  .callout h4{margin-top:0}
+  code{background:#eef2fb;border:1px solid var(--line);padding:1.5px 6px;border-radius:6px;font-size:13px;color:#4a64b8;font-family:"SF Mono",Menlo,Consolas,monospace}
+  pre{background:#f4f6fc;border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:"SF Mono",Menlo,Consolas,monospace;color:#3a4256;margin:12px 0}
+  pre .c{color:#8a93a8}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;box-shadow:var(--shadow)}
+  details[open]{background:var(--card2)}
+  summary{cursor:pointer;padding:14px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary:after{content:"+";color:var(--brand);font-size:20px;font-weight:400}
+  details[open] summary:after{content:"–"}
+  details .body{padding:2px 18px 16px}
+  .goal{background:rgba(63,165,147,.09);border:1px solid #c3e6de;border-radius:9px;padding:9px 12px;margin:6px 0 12px;font-size:14px}
+  .goal b{color:#2f8473}
+  .check{background:rgba(94,127,196,.08);border:1px dashed #c8d5ee;border-radius:9px;padding:9px 12px;margin:12px 0 4px;font-size:14px}
+  .gsearch{width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;margin:6px 0 16px}
+  .term{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0;background:var(--card)}
+  .term b{font-size:15.5px;color:#222838}
+  .term p{margin:4px 0 0;font-size:14px;color:#4a5266}
+  .term.hide{display:none}
+  .chk{display:flex;gap:11px;align-items:flex-start;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;background:var(--card);cursor:pointer}
+  .chk input{margin-top:4px;width:17px;height:17px;accent-color:var(--accent);flex:none}
+  .chk span{font-size:14.5px}
+  .chk.done span{text-decoration:line-through;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  .foot{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px;margin-top:30px}
+  .progress-wrap{position:sticky;top:0;z-index:5;background:rgba(247,249,253,.92);backdrop-filter:blur(6px);padding:8px 0;margin:-8px 0 0}
+  .bar{height:6px;background:var(--card);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--accent));transition:.3s}
+  .rolebtns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .rolebtns button{font-size:15px;font-weight:600;padding:10px 20px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;transition:.15s}
+  .rolebtns button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .rolecard{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0;background:var(--card);box-shadow:var(--shadow)}
+  .rolecard .who{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .rolecard .who b{font-size:16px;color:#222838}
+  .rolecard ul{margin:8px 0 0}
+  .owner{font-size:12px;font-weight:600;color:#4a64b0;background:rgba(94,127,196,.12);border:1px solid #d2ddf2;border-radius:999px;padding:2px 10px}
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="side" id="nav">
+    <h1>RGA APAC Hackathon</h1>
+    <div class="uc">UC-4 · Team Build Guide</div>
+    <a href="#start"><span class="n">0</span>Start Here</a>
+    <a href="#retool"><span class="n">1</span>Retool Basics</a>
+    <a href="#roles"><span class="n">2</span>Who Does What</a>
+    <a href="#overview"><span class="n">3</span>The Plan</a>
+    <a href="#partA"><span class="n">4</span>Part A · Upload &amp; Read</a>
+    <a href="#partB"><span class="n">5</span>Part B · Extract with AI</a>
+    <a href="#partC"><span class="n">6</span>Part C · Save to Database</a>
+    <a href="#partD"><span class="n">7</span>Part D · List &amp; Review</a>
+    <a href="#partE"><span class="n">8</span>Part E · Approve &amp; Export</a>
+    <a href="#polish"><span class="n">9</span>UI Polish (if time)</a>
+    <a href="#glossary"><span class="n">10</span>Plain-word Glossary</a>
+    <a href="#demo"><span class="n">11</span>Demo Checklist</a>
+  </nav>
+
+  <main>
+    <!-- 0 START -->
+    <section id="start">
+      <div class="hero">
+        <span class="eyebrow">Your build guide</span>
+        <h2 style="margin-top:4px">Treaty Extractor — build it in Retool, step by step</h2>
+        <p class="lead">A friendly, click-by-click guide to building your hackathon app. <b>No coding or AI background needed</b> — every step tells you exactly what to click in Retool and what it does. Work through it in order and you'll have a working app by the end.</p>
+        <div class="meta">
+          <span class="pill core">For: the build team (3–5 people)</span>
+          <span class="pill">No experience required</span>
+          <span class="pill ai">You'll use AI, made simple</span>
+        </div>
+      </div>
+
+      <div class="callout">
+        <h4>What are we building?</h4>
+        <p>Right now, after a reinsurance <b>treaty</b> (a contract) is signed, someone reads the whole document by hand and re-types the important details into other systems. It's slow and easy to get wrong. <b>Your app will do the reading for them:</b> upload the treaty → the app pulls out the key details and the rate tables → a person checks them on screen → clicks Approve → the clean data is saved and can be exported.</p>
+      </div>
+
+      <div class="grid g3">
+        <div class="card"><span class="tag">The goal</span><p style="margin:6px 0 0">One <b>working slice</b> you can show off — upload a treaty, watch it fill in, approve it. Not a finished product.</p></div>
+        <div class="card"><span class="tag">How to use this</span><p style="margin:6px 0 0">Follow the parts in order. Each step has a <b>Goal</b>, the exact <b>clicks</b>, and a <b>Checkpoint</b> to confirm it worked.</p></div>
+        <div class="card"><span class="tag">Golden rule</span><p style="margin:6px 0 0">Use <b>practice (mock) data only</b> — never a real client's treaty. And keep everything in English letters/numbers.</p></div>
+      </div>
+
+      <div class="callout ok">
+        <h4>Two promises to make this easier</h4>
+        <p>You don't need to memorise anything — copy the snippets we give you and move on. And you won't get stuck alone: your <b>coach stays with you the whole time</b> and there's support on standby. If a step doesn't behave, wave them over.</p>
+      </div>
+    </section>
+
+    <!-- 1 RETOOL BASICS -->
+    <section id="retool">
+      <span class="eyebrow">Learn the words once</span>
+      <h2>1 · Retool basics (5-minute primer)</h2>
+      <p class="lead">Retool is a tool for building simple apps by dragging pieces onto a screen — no coding from scratch. Here are the only words you need, in plain English. You'll meet each one again when you use it.</p>
+
+      <div class="grid g2">
+        <div class="card"><h4>App</h4><p style="margin:6px 0 0">The thing you're building — a screen with buttons, tables, and boxes. You build it in the <b>editor</b>.</p></div>
+        <div class="card"><h4>Component</h4><p style="margin:6px 0 0">A ready-made piece you drag onto the screen: a button, a table, a text box, a file upload. You pick them from the <b>component list</b> on the right.</p></div>
+        <div class="card"><h4>Query</h4><p style="margin:6px 0 0">An <b>action</b> the app runs — "read the file", "ask the AI", "save to the database". They live in the panel at the <b>bottom</b> of the editor.</p></div>
+        <div class="card"><h4>Resource</h4><p style="margin:6px 0 0">A <b>connection</b> the app uses — the AI service and the database are each a resource. Your admin has set these up already.</p></div>
+        <div class="card"><h4>Retool Database</h4><p style="margin:6px 0 0">A built-in place to <b>store</b> your data in tables (like a spreadsheet with rules). This is where approved treaties get saved.</p></div>
+        <div class="card"><h4>AI action</h4><p style="margin:6px 0 0">A special query that asks an AI model to do something — read a document, or pull out fields. You just fill in a box; no AI knowledge needed.</p></div>
+        <div class="card"><h4>Transformer</h4><p style="margin:6px 0 0">A tiny helper that <b>tidies up</b> data from a query so it shows nicely in a table. You'll copy ours in.</p></div>
+        <div class="card"><h4>Event handler</h4><p style="margin:6px 0 0">A rule that says <b>"when this happens, do that."</b> Example: "when the AI finishes, save the result." You add these in a few clicks.</p></div>
+      </div>
+
+      <div class="callout">
+        <h4>The editor at a glance</h4>
+        <p>When you open an app you'll see: the <b>canvas</b> (your screen) in the middle, the <b>component list</b> on the right, the <b>query panel</b> at the bottom, and the <b>page/component tree + inspector</b> on the left/right. That's it — you'll use these four areas the whole time.</p>
+      </div>
+    </section>
+
+    <!-- 2 ROLES -->
+    <section id="roles">
+      <span class="eyebrow">Split the work</span>
+      <h2>2 · Who does what</h2>
+      <p class="lead">You're a team of 3 to 5. Divide the app into streams so you build in parallel — but everyone should understand the whole flow, and pairing up on a tricky step is encouraged. Pick your team size to see a suggested split.</p>
+
+      <div class="rolebtns">
+        <button onclick="setTeam(3)" id="tb3" class="on">3 people</button>
+        <button onclick="setTeam(4)" id="tb4">4 people</button>
+        <button onclick="setTeam(5)" id="tb5">5 people</button>
+      </div>
+      <div id="roleOut"></div>
+
+      <div class="callout ai">
+        <h4>The four work streams (these are what get shared out)</h4>
+        <ul class="clean" style="margin:6px 0 0">
+          <li><b>Data &amp; Database</b> — designs the storage table and the save/update actions (Parts C &amp; E).</li>
+          <li><b>AI &amp; Extraction</b> — sets up the AI that reads the treaty and pulls out fields + rates (Parts A &amp; B). <span class="pill warn">the AI stream</span></li>
+          <li><b>App &amp; Screens</b> — builds what people see and click: upload, the list, the drawer, the tabs (Parts A, D).</li>
+          <li><b>Review &amp; Demo</b> — the review/approve experience and the final recorded demo (Parts E &amp; the demo).</li>
+        </ul>
+      </div>
+      <div class="callout"><p style="margin:0"><b>Note on the AI:</b> for the hackathon you'll build the AI right inside the app (simplest). If your team prefers, the AI &amp; Extraction owner can instead build it as a <b>Workflow</b> (a separate automated flow) — same steps, different place. Decide together in Part B.</p></div>
+    </section>
+
+    <!-- 3 OVERVIEW -->
+    <section id="overview">
+      <span class="eyebrow">The map</span>
+      <h2>3 · The plan, start to finish</h2>
+      <p class="lead">Five parts. After each part you'll have something that works, so you're never far from a demo. Tick things off as you go — the bar at the top fills up.</p>
+      <div class="kv">
+        <div>Part A · Upload &amp; read</div><div>Upload a treaty and turn the PDF into text.</div>
+        <div>Part B · Extract with AI</div><div>Ask the AI to pull out the fields and the rate table; tidy them into tables.</div>
+        <div>Part C · Save to database</div><div>Design the storage table; save each treaty automatically as "In review".</div>
+        <div>Part D · List &amp; review</div><div>Show all treaties in a list; click one to open a drawer with two tabs.</div>
+        <div>Part E · Approve &amp; export</div><div>Edit, check, Approve (locks it), and export for the other systems.</div>
+      </div>
+      <div class="progress-wrap" style="margin-top:16px"><div class="bar"><i id="bar"></i></div></div>
+      <p style="color:var(--muted);font-size:13px;margin-top:6px">Your progress across every step in this guide.</p>
+    </section>
+
+    <!-- PART A -->
+    <section id="partA">
+      <span class="eyebrow">Part A · owner: App &amp; Screens + AI &amp; Extraction</span>
+      <h2>4 · Part A — Upload &amp; read the treaty</h2>
+      <p class="lead">Goal for this part: you can upload a treaty PDF and see its text on screen. Two short steps.</p>
+
+      <details open>
+        <summary><span>Step A1 — Create the app &amp; add a file upload</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> an app where you can pick a treaty file.</div>
+          <ol class="steps">
+            <li>In your Retool Space, click <b>Create new → App</b>. Name it <b>Treaty Extractor</b>. You're now in the editor.</li>
+            <li>From the <b>component list</b> (right side), drag a <b>File Button</b> onto the canvas.</li>
+            <li>With it selected, look at the <b>Inspector</b> (right). Rename it to <code>fileInput</code> at the top.</li>
+            <li>Drag a <b>Text</b> component underneath. In its <b>Value</b> box, paste: <code>{{ fileInput.value.length ? fileInput.files[0].name : "No file yet" }}</code></li>
+          </ol>
+          <p><b>What this does:</b> the File Button lets a user choose a treaty; the Text shows the file's name so you know it worked.</p>
+          <div class="check"><b>Checkpoint:</b> click your File Button, pick the practice treaty PDF — the file name appears in the Text box.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step A2 — Turn the PDF into text (first AI query)</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> get the words out of the PDF so the app can use them.</div>
+          <ol class="steps">
+            <li>In the <b>query panel</b> (bottom), click <b>+ New → Resource query</b>.</li>
+            <li>For <b>Resource</b>, choose your <b>AI resource</b> (your admin named it — it runs on AWS Bedrock for this event).</li>
+            <li>Set <b>Action</b> to <b>Convert document to text</b>.</li>
+            <li>In <b>File source</b>, paste: <code>{{ fileInput.value[0] }}</code></li>
+            <li>Rename the query (top-left of the panel) to <code>convertDoc</code>, then click <b>Run</b>.</li>
+            <li>Drag a <b>Text Area</b> component onto the canvas and set its <b>Value</b> to <code>{{ convertDoc.data }}</code> so you can see the text.</li>
+          </ol>
+          <p><b>What this does:</b> reads the PDF and gives back its text. This step happens inside Retool — nothing is sent to an AI model yet.</p>
+          <div class="check"><b>Checkpoint:</b> after Run, the treaty's text appears in the Text Area.</div>
+        </div>
+      </details>
+    </section>
+
+    <!-- PART B -->
+    <section id="partB">
+      <span class="eyebrow">Part B · owner: AI &amp; Extraction</span>
+      <h2>5 · Part B — Extract the details with AI</h2>
+      <p class="lead">Goal for this part: the treaty's fields and its rate table show up as neat tables. This is the AI heart of the app — take it slowly, copy our snippets, and test after each step.</p>
+
+      <details open>
+        <summary><span>Step B1 — Ask the AI for the treaty fields</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> turn the messy text into labelled fields (treaty name, dates, percentages…).</div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Resource query</b> → <b>Resource:</b> your AI resource → <b>Action: Generate text</b>.</li>
+            <li>For <b>Model</b>, pick the Claude model your admin enabled (for example <code>claude-sonnet-4-6</code>).</li>
+            <li>In the <b>System message</b> box, paste the instructions below (it tells the AI exactly what to return).</li>
+            <li>In the <b>Prompt</b> box, paste the prompt below.</li>
+            <li>Rename the query to <code>extractFields</code> and click <b>Run</b>.</li>
+          </ol>
+          <h4>Paste into "System message"</h4>
+          <pre>You are a reinsurance treaty analyst. Read the treaty text and return
+ONLY a raw JSON object with these fields: treaty_name, cedent_name,
+effective_date, termination_date, treaty_type, quota_share_pct,
+retention_amount, currency, commission_pct.
+For each field also give a short "source_quote" copied from the text
+and a "confidence" of high, medium, or low.
+If a field is not in the text, use null. Do NOT use markdown or code fences.</pre>
+          <h4>Paste into "Prompt"</h4>
+          <pre>Extract the treaty fields from the text below.
+
+TREATY TEXT:
+{{ convertDoc.data[0] }}</pre>
+          <p><b>What this does:</b> the AI reads the text and hands back the details as data your app can display.</p>
+          <div class="check"><b>Checkpoint:</b> after Run, the query's Output area (bottom) shows the fields with values.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step B2 — Tidy the AI's answer (a transformer)</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> make sure the AI's answer is always clean, even if it adds extra formatting.</div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Transformer</b>. Rename it <code>extractClean</code>.</li>
+            <li>Delete the sample code and paste the snippet below.</li>
+          </ol>
+          <pre><span class="c">// cleans the AI answer so it always works</span>
+let raw = extractFields.data;
+if (raw && typeof raw === 'object') return raw;
+let s = String(raw).trim()
+        .replace(/^```[a-z]*\s*/i, '')
+        .replace(/\s*```$/, '').trim();
+try { return JSON.parse(s); }
+catch (e) { return { error: e.message }; }</pre>
+          <p><b>Why this exists:</b> sometimes the AI wraps its answer in extra symbols. This helper quietly removes them so your table never breaks. You don't need to understand the code — just paste it.</p>
+          <div class="check"><b>Checkpoint:</b> the transformer's output shows a clean set of fields.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step B3 — Show the fields in a table</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> the fields appear on screen in a table people can read.</div>
+          <ol class="steps">
+            <li>Drag a <b>Table</b> component onto the canvas.</li>
+            <li>Set its <b>Data</b> to <code>{{ extractClean.value.fields }}</code> (or <code>{{ [extractClean.value] }}</code> if you kept one row).</li>
+            <li>Rename the table to <code>paramsTable</code> in the Inspector.</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> the treaty's fields show up as rows in the table.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step B4 — Pull out the rate table</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> the pricing grid (the rate table) comes out as its own table.</div>
+          <ol class="steps">
+            <li>Make another <b>Generate text</b> query (same as B1) named <code>extractRates</code>.</li>
+            <li>System message: <i>"Extract the rate table as a raw JSON array of rows, each with age_band, male_ns, male_sm, female_ns, female_sm. Copy numbers exactly. No markdown."</i></li>
+            <li>Prompt: <code>Extract the rate table.\n\nTREATY TEXT:\n{{ convertDoc.data[0] }}</code></li>
+            <li>Add a <b>Transformer</b> named <code>rateTableClean</code> (copy the same cleanup snippet from B2, but change <code>extractFields</code> to <code>extractRates</code>).</li>
+            <li>Add a <b>Table</b> named <code>rateTable</code> with Data <code>{{ rateTableClean.value }}</code>.</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> the rate grid appears as a table of numbers.</div>
+          <div class="callout"><p style="margin:0"><b>Tip:</b> the rate table is the trickiest bit. If it looks off, tell your coach — there's a simpler no-AI way to read a clean grid.</p></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- PART C -->
+    <section id="partC">
+      <span class="eyebrow">Part C · owner: Data &amp; Database</span>
+      <h2>6 · Part C — Save treaties to the database</h2>
+      <p class="lead">Goal for this part: every treaty you analyse gets saved automatically so it shows up in a list you can come back to.</p>
+
+      <details open>
+        <summary><span>Step C1 — Design &amp; create the storage table</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> a table (like a spreadsheet with rules) to hold every treaty.</div>
+          <p>First, decide what to store. A table has <b>columns</b> (the kinds of information) and <b>rows</b> (one per treaty). Here's the design — build exactly this:</p>
+          <div class="kv">
+            <div>id</div><div>auto number — the unique key (Retool adds this for you)</div>
+            <div>treaty_ref</div><div>text — the treaty's reference code</div>
+            <div>cedent</div><div>text — the client company</div>
+            <div>source_file</div><div>text — the uploaded file name</div>
+            <div>status</div><div>text — either <code>in_review</code> or <code>approved</code></div>
+            <div>extracted_json</div><div>json — the AI's original answer (kept as-is)</div>
+            <div>reviewed_json</div><div>json — the human-checked answer</div>
+            <div>rate_json</div><div>json — the rate table</div>
+            <div>reviewed_by</div><div>text — who approved it</div>
+            <div>reviewed_at</div><div>timestamp — when it was approved</div>
+            <div>created_at</div><div>timestamp — when it was first analysed</div>
+          </div>
+          <ol class="steps" style="margin-top:14px">
+            <li>Go to <b>Resources → Retool Database</b> (left side of Retool, the database icon).</li>
+            <li>Click <b>Create new → Table</b>. Name it <code>treaties</code>.</li>
+            <li>Add each column above with its type (text, json, or timestamp). <code>id</code> and <code>created_at</code> are usually added for you.</li>
+          </ol>
+          <div class="callout"><p style="margin:0"><b>Why two "json" columns?</b> We keep the AI's first answer (<code>extracted_json</code>) separate from the human-checked one (<code>reviewed_json</code>) so we never lose the original — and later you can see how good the AI was.</p></div>
+          <div class="check"><b>Checkpoint:</b> an empty <code>treaties</code> table exists with all the columns.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step C2 — Build the "save" action</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> an action that writes one treaty into the table.</div>
+          <ol class="steps">
+            <li>Back in the app, query panel → <b>+ New → Resource query</b> → <b>Resource: Retool Database</b>.</li>
+            <li>At the top of the query, switch to <b>GUI mode</b> (the toggle next to SQL). GUI mode lets you fill in boxes instead of writing code.</li>
+            <li><b>Action type:</b> <b>Insert a record</b>. <b>Table:</b> <code>treaties</code>.</li>
+            <li>In the <b>Changeset</b> (the field map), add each value:
+              <br><code>treaty_ref</code> = <code>{{ extractClean.value.treaty_reference }}</code>
+              <br><code>cedent</code> = <code>{{ extractClean.value.cedent_name }}</code>
+              <br><code>source_file</code> = <code>{{ fileInput.files[0].name }}</code>
+              <br><code>status</code> = <code>in_review</code>
+              <br><code>extracted_json</code> = <code>{{ extractClean.value }}</code>
+              <br><code>rate_json</code> = <code>{{ rateTableClean.value }}</code></li>
+            <li>Rename the query to <code>insertTreaty</code>.</li>
+          </ol>
+          <p><b>What this does:</b> saves one treaty as a new row, marked <code>in_review</code> (waiting for a person to check it).</p>
+          <div class="check"><b>Checkpoint:</b> click Run once — a new row appears in your <code>treaties</code> table.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step C3 — Make it save automatically (event handler)</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> the moment the AI finishes, the treaty is saved — no extra click.</div>
+          <ol class="steps">
+            <li>Open your <code>extractFields</code> query. In its settings, find <b>Event handlers</b>.</li>
+            <li>Click <b>+ Add</b>. Set <b>Event</b> to <b>Success</b>.</li>
+            <li>Set <b>Action</b> to <b>Control query → Trigger</b>, and choose <code>insertTreaty</code>.</li>
+          </ol>
+          <p><b>What this does:</b> an event handler is a "when this, do that" rule. Here: <i>when the AI finishes reading the treaty, save it automatically.</i></p>
+          <div class="check"><b>Checkpoint:</b> upload a fresh treaty and run extraction — a new row appears in <code>treaties</code> by itself.</div>
+        </div>
+      </details>
+    </section>
+
+    <!-- PART D -->
+    <section id="partD">
+      <span class="eyebrow">Part D · owner: App &amp; Screens</span>
+      <h2>7 · Part D — The treaty list &amp; review drawer</h2>
+      <p class="lead">Goal for this part: a list of every treaty, and clicking one opens a side panel (a "drawer") with two tabs — the fields, and the rate table.</p>
+
+      <details open>
+        <summary><span>Step D1 — Show all treaties in a list</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> a table showing every saved treaty.</div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Resource query</b> → <b>Retool Database</b> → GUI mode → <b>Action: Read / Select</b> → <b>Table:</b> <code>treaties</code>. Name it <code>getTreaties</code>.</li>
+            <li>In the query's settings, turn on <b>Run on page load</b> so the list is always fresh.</li>
+            <li>Drag a <b>Table</b> onto the canvas, set <b>Data</b> to <code>{{ getTreaties.data }}</code>, and name it <code>treatiesTable</code>.</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> your saved treaties appear in the list.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step D2 — Add the three status filters</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> buttons to switch between In Review, Approved, and All.</div>
+          <ol class="steps">
+            <li>Drag a <b>Segmented Control</b> above the table. Name it <code>statusFilter</code>.</li>
+            <li>Set its options to <b>In Review</b>, <b>Approved</b>, <b>All</b>. Set the default to <b>In Review</b>.</li>
+            <li>The simplest filter: on the <code>treatiesTable</code>, use its built-in <b>Filter</b> setting to show rows where <code>status</code> matches the control (treat "All" as no filter). Your coach can show you the exact box.</li>
+          </ol>
+          <p><b>What this does:</b> lets a reviewer focus on treaties still waiting for them (In Review) by default.</p>
+          <div class="check"><b>Checkpoint:</b> switching the control changes which treaties show.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step D3 — Open a drawer when a row is clicked</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> click a treaty → a panel slides in from the right.</div>
+          <ol class="steps">
+            <li>From the component list, add a <b>Drawer</b> frame. Name it <code>reviewDrawer</code>.</li>
+            <li>Select <code>treatiesTable</code> → <b>Event handlers → + Add</b> → <b>Event: Row clicked</b> (or "Select row") → <b>Action: Control component → Open</b> → choose <code>reviewDrawer</code>.</li>
+          </ol>
+          <p><b>What this does:</b> the currently clicked treaty is available as <code>{{ treatiesTable.selectedRow }}</code> — you'll show its details inside the drawer next.</p>
+          <div class="check"><b>Checkpoint:</b> clicking a row opens the (empty) drawer.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step D4 — Two tabs inside the drawer</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for fields, one for the rate table.</div>
+          <ol class="steps">
+            <li>Inside the drawer, add a <b>Tabbed Container</b>. Name the two tabs <b>Treaty parameters</b> and <b>Rate table</b>.</li>
+            <li>On the <b>Treaty parameters</b> tab, add a <b>Table</b> showing the selected treaty's fields (<code>{{ treatiesTable.selectedRow.extracted_json }}</code>).</li>
+            <li>On the <b>Rate table</b> tab, add a <b>Table</b> showing <code>{{ treatiesTable.selectedRow.rate_json }}</code>.</li>
+            <li>At the top of the drawer, add a <b>Text</b> title showing the treaty ref and an <b>Approve treaty</b> button (you'll wire it in Part E).</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> clicking a treaty shows its fields; switching to the second tab shows its rates.</div>
+        </div>
+      </details>
+    </section>
+
+    <!-- PART E -->
+    <section id="partE">
+      <span class="eyebrow">Part E · owner: Review &amp; Demo + Data &amp; Database</span>
+      <h2>8 · Part E — Edit, approve &amp; export</h2>
+      <p class="lead">Goal for this part: a reviewer can fix any value, the app checks it's valid, and Approve locks it in. Then you can export for the other systems.</p>
+
+      <details open>
+        <summary><span>Step E1 — Let reviewers edit the fields</span><span class="owner">Review &amp; Demo</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> a person can correct a wrong value on screen.</div>
+          <ol class="steps">
+            <li>Select the fields Table in the drawer. In the Inspector, open the <b>value column's</b> settings and turn on <b>Editable</b>.</li>
+          </ol>
+          <p><b>What this does:</b> Retool automatically remembers every change the reviewer makes — you don't need to save each cell. The whole set is saved when they Approve.</p>
+          <div class="check"><b>Checkpoint:</b> you can type a new value into the table.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step E2 — Check the data before approving (validation)</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> stop obvious mistakes — blank required fields, wrong formats.</div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Transformer</b>. Name it <code>validate</code>. Paste the snippet below.</li>
+          </ol>
+          <pre><span class="c">// returns ok:true only when the basics look right</span>
+const f = extractClean.value || {};
+const problems = [];
+if (!f.treaty_reference) problems.push("Missing treaty reference");
+if (!f.effective_date)   problems.push("Missing effective date");
+if (f.quota_share_pct != null &amp;&amp;
+    (f.quota_share_pct < 0 || f.quota_share_pct > 100))
+    problems.push("Quota share must be 0–100");
+return { ok: problems.length === 0, problems };</pre>
+          <p><b>What this does:</b> a simple checklist the app runs for you. If anything's wrong, <code>validate.value.problems</code> lists it.</p>
+          <div class="check"><b>Checkpoint:</b> <code>validate.value.ok</code> is <code>true</code> for a good treaty.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step E3 — The Approve button (save &amp; lock)</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> Approve saves the checked values and marks the treaty Approved.</div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Resource query</b> → <b>Retool Database</b> → GUI mode → <b>Action: Update a record</b> → <b>Table:</b> <code>treaties</code>.</li>
+            <li><b>Filter by:</b> <code>id</code> equals <code>{{ treatiesTable.selectedRow.id }}</code> (this picks the right treaty).</li>
+            <li>In the changeset set: <code>status</code> = <code>approved</code>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code>, <code>rate_json</code> = <code>{{ rateTable.data }}</code>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
+            <li>Name it <code>updateTreaty</code>.</li>
+            <li>Select your <b>Approve treaty</b> button → <b>Event handlers → + Add → Event: Click → Action: Control query → Trigger <code>updateTreaty</code></b>.</li>
+            <li>On the button, set <b>Disabled</b> to <code>{{ !validate.value.ok }}</code> so it only works when the data passes.</li>
+            <li>On <code>updateTreaty</code>, add <b>Event handlers</b> for <b>Success</b>: trigger <code>getTreaties</code> (refresh the list), close <code>reviewDrawer</code>, and show a success notification.</li>
+          </ol>
+          <p><b>What this does:</b> saves the reviewer's checked values, flips the treaty to <b>Approved</b>, records who and when, then refreshes the list.</p>
+          <div class="check"><b>Checkpoint:</b> click Approve — the drawer closes and the treaty now shows <b>Approved</b> in the list.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step E4 — Export for the other systems</span><span class="owner">Review &amp; Demo</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> get the data out as a file for iRate / the ATF.</div>
+          <ol class="steps">
+            <li>On the rate table (or fields table), open the table's <b>⋯ menu</b> and use <b>Export data → CSV</b>.</li>
+            <li>Or add a <b>Button</b> named "Export" and, in its Click event, choose <b>Export data</b> and pick the table.</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> you get a CSV/Excel file with the treaty's data.</div>
+        </div>
+      </details>
+
+      <div class="callout ok"><p style="margin:0"><b>You now have a working app.</b> Upload a treaty → AI fills it in → it's saved → a reviewer checks and approves → export. That's the whole story. Everything below is optional polish and demo prep.</p></div>
+    </section>
+
+    <!-- POLISH -->
+    <section id="polish">
+      <span class="eyebrow">Only if you have spare time</span>
+      <h2>9 · UI polish (nice-to-have)</h2>
+      <p class="lead">If the app works and you have time, these quick touches make it look finished — <b>no custom code needed</b>. Skip anything you're short on time for; a working plain app beats a pretty broken one.</p>
+
+      <div class="grid g2">
+        <div class="card"><h4>Group things in Containers</h4><p style="margin:6px 0 0">Drag a <b>Container</b> around related components and give it a title (e.g. "Upload", "All treaties"). Instantly tidier.</p></div>
+        <div class="card"><h4>Colour the status column</h4><p style="margin:6px 0 0">On the list table, set the <code>status</code> column type to <b>Tag</b> — Retool colours the values, so Approved/In Review stand out.</p></div>
+        <div class="card"><h4>Right-align the numbers</h4><p style="margin:6px 0 0">In the rate table, set the number columns' alignment to <b>right</b> so the decimals line up and read cleanly.</p></div>
+        <div class="card"><h4>Add a title bar</h4><p style="margin:6px 0 0">Put a <b>Text</b> component at the top: "Treaty Extractor". Big heading style. Gives the app an identity.</p></div>
+        <div class="card"><h4>Friendly labels</h4><p style="margin:6px 0 0">Rename buttons and headings in plain words ("Approve treaty", "All treaties"). Use normal sentence case, not ALL CAPS.</p></div>
+        <div class="card"><h4>Change the theme colour</h4><p style="margin:6px 0 0"><b>Settings → Appearance</b> lets you pick one accent colour that applies everywhere — far easier than styling each piece.</p></div>
+        <div class="card"><h4>Loading &amp; empty messages</h4><p style="margin:6px 0 0">Tables have built-in settings for "no rows yet" text and a loading spinner — turn them on so blank states don't look broken.</p></div>
+        <div class="card"><h4>Add icons to buttons</h4><p style="margin:6px 0 0">Buttons have an <b>icon</b> setting — a checkmark on Approve, an upload arrow on the file button. A small, free touch.</p></div>
+      </div>
+      <div class="callout warn"><p style="margin:0"><b>Please avoid</b> hand-written CSS or custom components during the hackathon — they eat time and break easily. Everything above is built into Retool's settings panels.</p></div>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section id="glossary">
+      <span class="eyebrow">Plain-word dictionary</span>
+      <h2>10 · Glossary</h2>
+      <p>Quick, jargon-free meanings. Search to jump to one.</p>
+      <input class="gsearch" id="gsearch" placeholder="🔍 Search a word… (e.g. query, drawer, treaty)" oninput="filterTerms()">
+      <div id="terms">
+        <div class="term"><b>Treaty</b><p>The reinsurance contract your app reads. Signed between an insurer and a reinsurer (RGA).</p></div>
+        <div class="term"><b>ATF</b><p>The admin form/record where the treaty's details need to be entered. One place your data feeds into.</p></div>
+        <div class="term"><b>iRate</b><p>A pricing tool the rate tables get uploaded into. The other place your data feeds into.</p></div>
+        <div class="term"><b>Rate table</b><p>The grid of pricing numbers inside a treaty (rates by age, sex, smoker). Your app pulls this out too.</p></div>
+        <div class="term"><b>App</b><p>The screen you're building in Retool — buttons, tables, and boxes.</p></div>
+        <div class="term"><b>Component</b><p>A drag-on piece: a table, a button, a file upload, a text box.</p></div>
+        <div class="term"><b>Query</b><p>An action the app runs: read a file, ask the AI, save to the database.</p></div>
+        <div class="term"><b>Resource</b><p>A connection the app uses — the AI service, the database. Set up by your admin.</p></div>
+        <div class="term"><b>Retool Database</b><p>A built-in place to store data in tables. Where treaties are saved.</p></div>
+        <div class="term"><b>GUI mode</b><p>A way to build a database action by filling in boxes instead of writing code. You'll use this to save and update.</p></div>
+        <div class="term"><b>AI action / Generate text</b><p>A query that asks an AI model to do something — here, pull the fields out of the treaty.</p></div>
+        <div class="term"><b>Convert document to text</b><p>The query that reads the words out of a PDF.</p></div>
+        <div class="term"><b>Transformer</b><p>A small helper that tidies data so it displays neatly. You copy ours in.</p></div>
+        <div class="term"><b>Event handler</b><p>A "when this happens, do that" rule. Example: when the AI finishes, save the treaty.</p></div>
+        <div class="term"><b>On success</b><p>The kind of event handler that runs after a query finishes without an error.</p></div>
+        <div class="term"><b>Drawer</b><p>A panel that slides in from the side to show details — here, a treaty's fields and rates.</p></div>
+        <div class="term"><b>Tabs (Tabbed Container)</b><p>A component with switchable tabs. You use two: Treaty parameters and Rate table.</p></div>
+        <div class="term"><b>Segmented Control</b><p>A row of buttons for picking one option — here, In Review / Approved / All.</p></div>
+        <div class="term"><b>JSON</b><p>A tidy way to write data as labelled values. The AI returns its answer as JSON; you rarely read it directly.</p></div>
+        <div class="term"><b>Validation</b><p>Automatic checks that the data looks right before it's approved.</p></div>
+        <div class="term"><b>Status (In Review / Approved)</b><p>A treaty's stage. New treaties are "In Review"; once a person confirms, they become "Approved" and lock.</p></div>
+        <div class="term"><b>Mock data</b><p>Practice/fake data. The only kind you're allowed to use in the hackathon.</p></div>
+      </div>
+    </section>
+
+    <!-- DEMO -->
+    <section id="demo">
+      <span class="eyebrow">Show it off</span>
+      <h2>11 · Demo checklist</h2>
+      <p class="lead">You'll record a short demo at the end. Judges care that it <b>works</b> and that you can <b>tell the story</b>. Keep it to four beats and practise once.</p>
+      <div class="kv">
+        <div>1 · The problem</div><div>"Today someone re-types every treaty by hand — slow, and one typo breaks the next system."</div>
+        <div>2 · The app, live</div><div>Upload a treaty → the fields fill in → open the drawer → fix one value → click Approve.</div>
+        <div>3 · The benefit</div><div>"Minutes instead of an afternoon, fewer errors, and a record of who approved what."</div>
+        <div>4 · What's next</div><div>Handle more treaty formats, connect the export to iRate/ATF, run it for the whole team.</div>
+      </div>
+      <h3>Before you record</h3>
+      <label class="chk"><input type="checkbox"><span>Test the whole flow once with a fresh practice treaty — upload to approve.</span></label>
+      <label class="chk"><input type="checkbox"><span>Have a known-good treaty ready so the live AI step returns sensible results.</span></label>
+      <label class="chk"><input type="checkbox"><span>Decide who talks and who clicks. Practise the four beats once.</span></label>
+      <label class="chk"><input type="checkbox"><span>Check everything on screen is mock data, in English letters/numbers — no real names.</span></label>
+      <label class="chk"><input type="checkbox"><span>Keep it short (a few minutes). Show it working; don't tour every button.</span></label>
+
+      <div class="foot">
+        <p>UC-4 Treaty Extractor · team build guide for the RGA APAC Retool Hackathon. Use practice data only. If a step misbehaves, your coach and support are there to help — that's what they're for.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // team roles selector
+  var STREAMS = {
+    data:  {n:"Data &amp; Database", d:"Designs the treaties table (C1) and builds the save/update actions and validation (C2, C3, E2, E3)."},
+    ai:    {n:"AI &amp; Extraction", d:"Sets up the AI queries and transformers that read the treaty and pull out fields + rates (A2, B1–B4). Owns the Workflow if you build one."},
+    app:   {n:"App &amp; Screens", d:"Builds the canvas: upload, tables, the list, the drawer and tabs, and wires the clicks (A1, B3, D1–D4)."},
+    review:{n:"Review &amp; Demo", d:"Owns the review/approve experience (E1, E4) and prepares + records the final demo."}
+  };
+  var PLANS = {
+    3: [
+      ["ai", "AI &amp; Extraction", "Owns all of Parts A–B (the AI). Pairs with App on B3."],
+      ["app", "App &amp; Screens + Review", "Builds every screen (Parts A, D) and the review/approve UI + demo (E1, E4)."],
+      ["data", "Data &amp; Database", "Owns the database, saving, validation and the Approve action (Parts C, E2, E3)."]
+    ],
+    4: [
+      ["ai", "AI &amp; Extraction", "Owns Parts A–B (the AI queries + transformers)."],
+      ["app", "App &amp; Screens", "Builds the screens: upload, list, drawer, tabs (Parts A, D)."],
+      ["data", "Data &amp; Database", "Owns the database, saving and the Approve action (Parts C, E2, E3)."],
+      ["review", "Review &amp; Demo", "Owns editing + export + the demo (E1, E4), and tests the whole flow."]
+    ],
+    5: [
+      ["ai", "AI &amp; Extraction", "Owns Parts A–B; can build the AI as a Workflow if you choose."],
+      ["app", "App &amp; Screens", "Builds the screens and wires the clicks (Parts A, D)."],
+      ["data", "Data &amp; Database", "Designs the table and the save action (Part C)."],
+      ["review", "Review &amp; Approve", "Owns the drawer review, validation and Approve flow (Part E)."],
+      ["demo", "Demo &amp; QA", "Tests end-to-end with fresh treaties, keeps the story, records the demo."]
+    ]
+  };
+  function setTeam(n){
+    [3,4,5].forEach(function(k){document.getElementById('tb'+k).classList.toggle('on',k===n)});
+    var out=document.getElementById('roleOut'); out.innerHTML='';
+    PLANS[n].forEach(function(r,i){
+      var div=document.createElement('div'); div.className='rolecard';
+      div.innerHTML='<div class="who"><span class="owner">Person '+(i+1)+'</span><b>'+r[1]+'</b></div>'+
+                    '<ul class="clean" style="margin:8px 0 0"><li>'+r[2]+'</li></ul>';
+      out.appendChild(div);
+    });
+  }
+  setTeam(3);
+
+  // glossary filter
+  function filterTerms(){
+    var q=document.getElementById('gsearch').value.toLowerCase();
+    document.querySelectorAll('#terms .term').forEach(function(t){
+      t.classList.toggle('hide', q && t.textContent.toLowerCase().indexOf(q)===-1);
+    });
+  }
+
+  // checklist + progress
+  var boxes=[].slice.call(document.querySelectorAll('.chk input'));
+  function saveState(){try{localStorage.setItem('uc4team',JSON.stringify(boxes.map(function(b){return b.checked})))}catch(e){}}
+  function loadState(){try{var s=JSON.parse(localStorage.getItem('uc4team')||'[]');boxes.forEach(function(b,i){if(s[i])b.checked=true})}catch(e){}}
+  function refresh(){
+    boxes.forEach(function(b){b.closest('.chk').classList.toggle('done',b.checked)});
+    var done=boxes.filter(function(b){return b.checked}).length;
+    var bar=document.getElementById('bar'); if(bar) bar.style.width=(boxes.length?100*done/boxes.length:0)+'%';
+  }
+  loadState();refresh();
+  boxes.forEach(function(b){b.addEventListener('change',function(){refresh();saveState()})});
+
+  // scrollspy
+  var links=[].slice.call(document.querySelectorAll('nav.side a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  function spy(){
+    var y=window.scrollY+120,cur=0;
+    secs.forEach(function(s,i){if(s&&s.offsetTop<=y)cur=i});
+    links.forEach(function(a,i){a.classList.toggle('active',i===cur)});
+  }
+  window.addEventListener('scroll',spy);spy();
+</script>
+</body>
+</html>
