@@ -177,8 +177,75 @@
 
       <div class="callout">
         <h4>The editor at a glance</h4>
-        <p>When you open an app you'll see: the <b>canvas</b> (your screen) in the middle, the <b>component list</b> on the right, the <b>query panel</b> at the bottom, and the <b>page/component tree + inspector</b> on the left/right. That's it — you'll use these four areas the whole time.</p>
+        <p>When you open an app you'll see: the <b>canvas</b> (your screen) in the middle, the <b>component list</b> on the right, the <b>query panel</b> at the bottom, and the <b>inspector</b> (settings) on the right when you click something. That's it — you'll use these four areas the whole time.</p>
       </div>
+
+      <h3>The basic moves — how to actually do things</h3>
+      <p>Every step in this guide is built from these six little actions. When a step says "add a component" or "create a query", the exact clicks are right here. Come back any time.</p>
+
+      <details open>
+        <summary><span>Move 1 — Add a component (drag &amp; drop)</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li>Look at the <b>right side</b> of the editor — that's the <b>component library</b>, full of little tiles (Button, Table, Text…).</li>
+            <li>Don't see it? Click the <b>squares icon</b> (or "+ Add") at the top-right to open it.</li>
+            <li>Find the piece you want — scroll, or type its name in the <b>search box</b> at the top of that panel.</li>
+            <li>Point your mouse at the tile, <b>press and hold</b> the left mouse button, <b>drag</b> it into the middle area (the <b>canvas</b>), and <b>let go</b> where you want it.</li>
+            <li>It appears on your screen. That's it.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary><span>Move 2 — Select something &amp; find its name</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li><b>Click</b> a component once to select it. A settings panel opens on the right — the <b>Inspector</b>.</li>
+            <li>At the very <b>top of the Inspector</b> is the component's <b>name</b>. Retool names things automatically, like <code>fileInput1</code>, <code>table1</code>, <code>button1</code>.</li>
+            <li>To rename it, click the name and type. (Keeping the auto-name is fine too — just use whatever name it shows in your snippets.)</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary><span>Move 3 — Type into a box, and what {{ }} means</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li>Settings in the Inspector are <b>boxes you type into</b> (like "Value", "Text", "Label").</li>
+            <li>Plain words go in as-is. But <b>double curly braces</b> <code>{{ }}</code> mean "put a <b>live value</b> here", not literal text.</li>
+            <li>Example: <code>{{ fileInput1.value[0].name }}</code> means "the name of the uploaded file." <b>Copy our snippets exactly</b>, including the <code>{{ }}</code>.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary><span>Move 4 — Create a query (an action)</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li>Look at the <b>bottom</b> of the editor — the <b>query panel</b>. If it's shut, click it to open it.</li>
+            <li>Click <b>+ New</b> (or "+ Add") → choose <b>Resource query</b>.</li>
+            <li>At the top of the new query is a <b>Resource dropdown</b>. Click it and pick the connection you need (the AI resource, the Retool S3 bucket, or the Retool Database).</li>
+            <li>Fill in the boxes it shows you, then rename the query (top-left) so you remember what it does.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary><span>Move 5 — Run a query &amp; check it worked</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li>With a query open, click the <b>Run</b> button (a play ▶ icon, top-right of the query).</li>
+            <li>The answer appears in the <b>Output</b> area at the bottom of the query. Green means it worked; red means something's off — wave your coach over.</li>
+          </ol>
+        </div>
+      </details>
+      <details>
+        <summary><span>Move 6 — Add an event handler ("when this, do that")</span></summary>
+        <div class="body">
+          <ol class="steps">
+            <li>Select the component or query that should react (e.g. a button, or a query that just finished).</li>
+            <li>In the Inspector, scroll to <b>Event handlers</b>. Click <b>+ Add</b>.</li>
+            <li>Pick the <b>Event</b> (like "Click", "Success", "Row clicked") and the <b>Action</b> (like "Trigger query", "Open component"), then choose the target.</li>
+          </ol>
+          <p style="font-size:14px;margin:6px 0 0">Plain meaning: "<b>when</b> this thing happens, <b>do</b> that thing automatically."</p>
+        </div>
+      </details>
     </section>
 
     <!-- 2 ROLES -->
@@ -226,52 +293,101 @@
     <section id="partA">
       <span class="eyebrow">Part A · owner: App &amp; Screens + AI &amp; Extraction</span>
       <h2>4 · Part A — Upload &amp; read the treaty</h2>
-      <p class="lead">Goal for this part: you can upload a treaty PDF and see its text on screen. Two short steps.</p>
+      <p class="lead">Goal for this part: you can upload a treaty PDF, the app stores it, and you can see its text on screen. Five small steps — every click is spelled out. When a step mentions "add a component" or "create a query", the exact clicks are in <a href="#retool">Section 1 → The basic moves</a>.</p>
 
       <details open>
-        <summary><span>Step A1 — Create the app &amp; add a file upload</span><span class="owner">App &amp; Screens</span></summary>
+        <summary><span>Step A1 — Create the app</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> an app where you can pick a treaty file.</div>
+          <div class="goal"><b>Goal:</b> a blank app to build in.</div>
           <ol class="steps">
-            <li>In your Retool Space, click <b>Create new → App</b>. Name it <b>Treaty Extractor</b>. You're now in the editor.</li>
-            <li>From the <b>component list</b> (right side), drag a <b>File Button</b> onto the canvas.</li>
-            <li>With it selected, look at the <b>Inspector</b> (right). Rename it to <code>fileInput</code> at the top.</li>
-            <li>Drag a <b>Text</b> component underneath. In its <b>Value</b> box, paste: <code>{{ fileInput.value.length ? fileInput.files[0].name : "No file yet" }}</code></li>
+            <li>Go to your Retool home page. Click the <b>Create new</b> button (top-right corner) and choose <b>App</b>.</li>
+            <li>A small box asks for a name. Type <b>Treaty Extractor</b> and confirm.</li>
+            <li>You're now in the <b>editor</b>. Middle = the <b>canvas</b> (your screen). Right = the <b>component library</b>. Bottom = the <b>query panel</b>.</li>
           </ol>
-          <p><b>What this does:</b> the File Button lets a user choose a treaty; the Text shows the file's name so you know it worked.</p>
-          <div class="check"><b>Checkpoint:</b> click your File Button, pick the practice treaty PDF — the file name appears in the Text box.</div>
+          <div class="check"><b>Checkpoint:</b> you're looking at an empty app editor with your app's name at the top.</div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step A2 — Turn the PDF into text (first AI query)</span><span class="owner">AI &amp; Extraction</span></summary>
+        <summary><span>Step A2 — Add the file-upload box (drag &amp; drop)</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> get the words out of the PDF so the app can use them.</div>
+          <div class="goal"><b>Goal:</b> a button people click to choose a treaty file. <span style="color:var(--muted)">(Uses Move 1.)</span></div>
           <ol class="steps">
-            <li>In the <b>query panel</b> (bottom), click <b>+ New → Resource query</b>.</li>
-            <li>For <b>Resource</b>, choose your <b>AI resource</b> (your admin named it — it runs on AWS Bedrock for this event).</li>
+            <li>On the <b>right side</b> (the component library), click the <b>search box</b> at the top and type <code>file</code>.</li>
+            <li>Find the tile called <b>File Input</b> (or "File Button"). <b>Press and hold</b> it with your mouse, <b>drag</b> it into the middle (the canvas), and <b>let go</b>.</li>
+            <li>A file box now sits on your screen. <b>Click it once</b> to select it.</li>
+            <li>Look at the top of the <b>Inspector</b> (right side) — it shows the box's name. It's almost certainly <code>fileInput1</code>. <b>We'll use that exact name</b> in the snippets below, so if yours is different, either rename it to <code>fileInput1</code> or swap the name in the snippets.</li>
+          </ol>
+          <div class="check"><b>Checkpoint:</b> a file-upload box is on your canvas and named <code>fileInput1</code>.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step A3 — Upload a treaty &amp; read its name and contents</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> put a practice file in and prove the app can read it. <span style="color:var(--muted)">(Uses Moves 1 &amp; 3.)</span></div>
+          <ol class="steps">
+            <li>On the canvas, <b>click your file box</b> and pick the <b>practice treaty PDF</b> from your computer. (You can do this right here in the editor.)</li>
+            <li>Now prove the app sees it: <b>drag a Text component</b> onto the canvas (search <code>text</code> in the component library).</li>
+            <li>Click the Text component. In the Inspector, find the <b>Value</b> box, clear it, and paste exactly:<br><code>{{ fileInput1.value[0].name }}</code></li>
+            <li>The <b>file's name</b> should now show on screen. That means the upload worked.</li>
+          </ol>
+          <p><b>What these mean (important — you'll reuse them):</b></p>
+          <ul class="clean">
+            <li><code>{{ fileInput1.value[0].name }}</code> = <b>the name</b> of the uploaded file (e.g. "Sample_Treaty.pdf").</li>
+            <li><code>{{ fileInput1.value[0].base64Data }}</code> = <b>the file's contents</b>, turned into safe text called <b>base64</b>. Other steps use this to actually read the treaty. (You don't need to understand base64 — just know this is "the file itself.")</li>
+          </ul>
+          <div class="check"><b>Checkpoint:</b> the Text component shows your file's name.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step A4 — Create the file query (Retool S3 bucket)</span><span class="owner">App &amp; Screens</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> a query that takes the uploaded file and stores it so the app can work with it. <span style="color:var(--muted)">(Uses Moves 4 &amp; 5.)</span></div>
+          <ol class="steps">
+            <li>At the <b>bottom</b> (query panel), click <b>+ New → Resource query</b>.</li>
+            <li>At the top of the new query, open the <b>Resource</b> dropdown and choose <b>Retool S3 bucket</b>.</li>
+            <li>Find the <b>Bucket name</b> field and <b>leave it empty</b> — don't type anything. (Empty means "use the default storage.")</li>
+            <li>In the box for the <b>file's data</b>, paste the contents: <code>{{ fileInput1.value[0].base64Data }}</code></li>
+            <li>In the box for the <b>file name</b>, paste: <code>{{ fileInput1.value[0].name }}</code></li>
+            <li>Rename the query (top-left) to <code>uploadFile</code>, then click <b>Run</b>.</li>
+          </ol>
+          <p><b>What this does:</b> takes the file you uploaded and saves it into Retool's storage. The two boxes you filled are just "the file's contents" and "the file's name", read straight from the upload box in Step A3.</p>
+          <div class="callout"><p style="margin:0"><b>Heads-up:</b> box labels can look slightly different depending on the setup. If a field name doesn't match exactly (e.g. "Data" vs "File content"), ask your coach to point at the right one — the two things you're putting in are always <b>the base64 contents</b> and <b>the file name</b>.</p></div>
+          <div class="check"><b>Checkpoint:</b> click Run — the query finishes <b>green</b> (no red error).</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step A5 — Turn the PDF into text</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> get the words out of the PDF so the app can use them. <span style="color:var(--muted)">(Uses Moves 4 &amp; 5.)</span></div>
+          <ol class="steps">
+            <li>Query panel → <b>+ New → Resource query</b>.</li>
+            <li><b>Resource</b> dropdown → your <b>AI resource</b> (your admin named it — it runs on AWS Bedrock for this event).</li>
             <li>Set <b>Action</b> to <b>Convert document to text</b>.</li>
-            <li>In <b>File source</b>, paste: <code>{{ fileInput.value[0] }}</code></li>
-            <li>Rename the query (top-left of the panel) to <code>convertDoc</code>, then click <b>Run</b>.</li>
-            <li>Drag a <b>Text Area</b> component onto the canvas and set its <b>Value</b> to <code>{{ convertDoc.data }}</code> so you can see the text.</li>
+            <li>In <b>File source</b>, paste: <code>{{ fileInput1.value[0] }}</code></li>
+            <li>Rename the query to <code>convertDoc</code>, then click <b>Run</b>.</li>
+            <li><b>Drag a Text Area</b> component onto the canvas and set its <b>Value</b> to <code>{{ convertDoc.data }}</code> so you can see the text.</li>
           </ol>
-          <p><b>What this does:</b> reads the PDF and gives back its text. This step happens inside Retool — nothing is sent to an AI model yet.</p>
+          <p><b>What this does:</b> reads the PDF and gives back its text as words the app can use next.</p>
           <div class="check"><b>Checkpoint:</b> after Run, the treaty's text appears in the Text Area.</div>
-          <div class="callout warn" style="margin-top:12px"><p style="margin:0"><b>If "Convert document to text" isn't in the list</b>, that feature may not be switched on for the event. No problem — use <b>Plan B</b> below instead. Everything after this step works exactly the same.</p></div>
+          <div class="callout warn" style="margin-top:12px"><p style="margin:0"><b>If "Convert document to text" isn't in the Action list</b>, that feature may not be switched on for the event. No problem — use <b>Plan B</b> below instead. Everything after this step works exactly the same.</p></div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step A2 (Plan B) — Read the PDF with a small script in a Workflow</span><span class="owner">AI &amp; Extraction</span></summary>
+        <summary><span>Step A5 (Plan B) — Read the PDF with a small script in a Workflow</span><span class="owner">AI &amp; Extraction</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the same result as A2 — the treaty's text — but using a tiny script instead of the built-in AI action. Only do this if A2 wasn't available.</div>
+          <div class="goal"><b>Goal:</b> the same result as A5 — the treaty's text — but using a tiny script instead of the built-in AI action. Only do this if A5 wasn't available.</div>
           <p><b>What's a Workflow?</b> It's a separate mini-program in Retool that runs a few steps in order, away from your app screen. We'll make one whose only job is: take the PDF, read its text, hand it back. Your app calls it like any other action.</p>
           <ol class="steps">
             <li>In Retool, go to <b>Create new → Workflow</b>. Name it <code>extractText</code>.</li>
             <li>It starts with a <b>Start trigger</b> block. This is where your app will send the PDF.</li>
             <li>Add a <b>Code block</b> and set its language to <b>Python</b>. Paste the script below into it.</li>
             <li>Open the Workflow's <b>settings → Python libraries</b> and add <code>pypdf</code> (this is the tool that reads PDFs). If it's already there, skip this.</li>
-            <li>Back in your <b>app</b>: query panel → <b>+ New → Resource query</b> → choose your <code>extractText</code> <b>Workflow</b>. In its input, set <code>file</code> to <code>{{ fileInput.value[0] }}</code>. Name this query <code>extractText</code> and Run.</li>
+            <li>Back in your <b>app</b>: query panel → <b>+ New → Resource query</b> → choose your <code>extractText</code> <b>Workflow</b>. In its input, set <code>file</code> to <code>{{ fileInput1.value[0].base64Data }}</code> (the file's contents). Name this query <code>extractText</code> and Run.</li>
             <li>Show the result: a <b>Text Area</b> with Value <code>{{ extractText.data.text }}</code>.</li>
           </ol>
           <h4>Paste this into the Python code block</h4>
@@ -314,13 +430,16 @@ return {"text": "\n\n".join(pages)}</pre>
       <details open>
         <summary><span>Step B1 — Ask the AI for the treaty fields</span><span class="owner">AI &amp; Extraction</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> turn the messy text into labelled fields (treaty name, dates, percentages…).</div>
+          <div class="goal"><b>Goal:</b> turn the messy text into labelled fields (treaty name, dates, percentages…). <span style="color:var(--muted)">(Uses Moves 4 &amp; 5.)</span></div>
           <ol class="steps">
-            <li>Query panel → <b>+ New → Resource query</b> → <b>Resource:</b> your AI resource → <b>Action: Generate text</b>.</li>
-            <li>For <b>Model</b>, pick the Claude model your admin enabled (for example <code>claude-sonnet-4-6</code>).</li>
-            <li>In the <b>System message</b> box, paste the instructions below (it tells the AI exactly what to return).</li>
-            <li>In the <b>Prompt</b> box, paste the prompt below.</li>
-            <li>Rename the query to <code>extractFields</code> and click <b>Run</b>.</li>
+            <li>At the <b>bottom</b> (query panel), click <b>+ New → Resource query</b>.</li>
+            <li>At the top of the new query, open the <b>Resource</b> dropdown and choose your <b>AI resource</b> (the one your admin set up — it runs on AWS Bedrock).</li>
+            <li>Find the <b>Action</b> dropdown and choose <b>Generate text</b>.</li>
+            <li>Find the <b>Model</b> dropdown and pick the Claude model your admin enabled (for example <code>claude-sonnet-4-6</code>).</li>
+            <li>Find the box labelled <b>System message</b> and paste the first block below into it (this tells the AI exactly what to give back).</li>
+            <li>Find the box labelled <b>Prompt</b> (sometimes "User message") and paste the second block below.</li>
+            <li>At the <b>top-left</b> of the query, click its name and change it to <code>extractFields</code>.</li>
+            <li>Click <b>Run</b> (the ▶ button, top-right of the query).</li>
           </ol>
           <h4>Paste into "System message"</h4>
           <pre>You are a reinsurance treaty analyst. Read the treaty text and return
@@ -345,8 +464,10 @@ TREATY TEXT:
         <div class="body">
           <div class="goal"><b>Goal:</b> make sure the AI's answer is always clean, even if it adds extra formatting.</div>
           <ol class="steps">
-            <li>Query panel → <b>+ New → Transformer</b>. Rename it <code>extractClean</code>.</li>
-            <li>Delete the sample code and paste the snippet below.</li>
+            <li>At the <b>bottom</b> (query panel), click <b>+ New</b>, then choose <b>Transformer</b> (not Resource query this time).</li>
+            <li>At the <b>top-left</b>, rename it to <code>extractClean</code>.</li>
+            <li>You'll see a code box with some sample text. <b>Select all of it and delete it</b>, then paste the snippet below.</li>
+            <li>It runs on its own — no Run button needed. Look at the <b>Output</b> underneath to see the tidied result.</li>
           </ol>
           <pre><span class="c">// cleans the AI answer so it always works</span>
 let raw = extractFields.data;
@@ -364,11 +485,12 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step B3 — Show the fields in a table</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the fields appear on screen in a table people can read.</div>
+          <div class="goal"><b>Goal:</b> the fields appear on screen in a table people can read. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
-            <li>Drag a <b>Table</b> component onto the canvas.</li>
-            <li>Set its <b>Data</b> to <code>{{ extractClean.value.fields }}</code> (or <code>{{ [extractClean.value] }}</code> if you kept one row).</li>
-            <li>Rename the table to <code>paramsTable</code> in the Inspector.</li>
+            <li>On the right (component library), search <code>table</code> and <b>drag a Table</b> onto the canvas.</li>
+            <li>Click the table to select it. In the <b>Inspector</b> (right), find the <b>Data</b> box.</li>
+            <li>Clear the Data box and paste <code>{{ extractClean.value.fields }}</code> (or <code>{{ [extractClean.value] }}</code> if the AI returned one object instead of a list).</li>
+            <li>At the <b>top of the Inspector</b>, rename the table to <code>paramsTable</code>.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> the treaty's fields show up as rows in the table.</div>
         </div>
@@ -377,13 +499,13 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step B4 — Pull out the rate table</span><span class="owner">AI &amp; Extraction</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the pricing grid (the rate table) comes out as its own table.</div>
+          <div class="goal"><b>Goal:</b> the pricing grid (the rate table) comes out as its own table. <span style="color:var(--muted)">(Repeats B1–B3 for the rate table.)</span></div>
           <ol class="steps">
-            <li>Make another <b>Generate text</b> query (same as B1) named <code>extractRates</code>.</li>
-            <li>System message: <i>"Extract the rate table as a raw JSON array of rows, each with age_band, male_ns, male_sm, female_ns, female_sm. Copy numbers exactly. No markdown."</i></li>
-            <li>Prompt: <code>Extract the rate table.\n\nTREATY TEXT:\n{{ convertDoc.data[0] }}</code></li>
-            <li>Add a <b>Transformer</b> named <code>rateTableClean</code> (copy the same cleanup snippet from B2, but change <code>extractFields</code> to <code>extractRates</code>).</li>
-            <li>Add a <b>Table</b> named <code>rateTable</code> with Data <code>{{ rateTableClean.value }}</code>.</li>
+            <li>Make another query exactly like B1: <b>+ New → Resource query → Resource:</b> your AI resource → <b>Action: Generate text</b>. Rename it <code>extractRates</code>.</li>
+            <li>In its <b>System message</b> box, paste: <i>"Extract the rate table as a raw JSON array of rows, each with age_band, male_ns, male_sm, female_ns, female_sm. Copy numbers exactly. No markdown."</i></li>
+            <li>In its <b>Prompt</b> box, paste: <code>Extract the rate table.</code> then a blank line, then <code>TREATY TEXT:</code> and <code>{{ convertDoc.data[0] }}</code>. Click <b>Run</b>.</li>
+            <li>Make a <b>Transformer</b> (+ New → Transformer) named <code>rateTableClean</code>. Paste the same cleanup code from B2, but change the word <code>extractFields</code> to <code>extractRates</code> on the first line.</li>
+            <li><b>Drag a Table</b> onto the canvas, rename it <code>rateTable</code>, and set its <b>Data</b> to <code>{{ rateTableClean.value }}</code>.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> the rate grid appears as a table of numbers.</div>
           <div class="callout"><p style="margin:0"><b>Tip:</b> the rate table is the trickiest bit. If it looks off, tell your coach — there's a simpler no-AI way to read a clean grid.</p></div>
@@ -416,9 +538,11 @@ catch (e) { return { error: e.message }; }</pre>
             <div>created_at</div><div>timestamp — when it was first analysed</div>
           </div>
           <ol class="steps" style="margin-top:14px">
-            <li>Go to <b>Resources → Retool Database</b> (left side of Retool, the database icon).</li>
-            <li>Click <b>Create new → Table</b>. Name it <code>treaties</code>.</li>
-            <li>Add each column above with its type (text, json, or timestamp). <code>id</code> and <code>created_at</code> are usually added for you.</li>
+            <li>Leave the app for a moment. In the <b>far-left sidebar</b> of Retool, click <b>Retool Database</b> (a database/cylinder icon). Can't spot it? Ask your coach to point at it.</li>
+            <li>Click <b>Create new → Table</b>. In the name box, type <code>treaties</code>.</li>
+            <li>For each row in the list above, add a <b>column</b>: type the column name (e.g. <code>treaty_ref</code>), then choose its <b>type</b> from the dropdown next to it — <b>text</b>, <b>json</b>, or <b>timestamp</b>.</li>
+            <li><code>id</code> and <code>created_at</code> are usually created for you automatically — if you see them already there, leave them.</li>
+            <li>Save the table.</li>
           </ol>
           <div class="callout"><p style="margin:0"><b>Why two "json" columns?</b> We keep the AI's first answer (<code>extracted_json</code>) separate from the human-checked one (<code>reviewed_json</code>) so we never lose the original — and later you can see how good the AI was.</p></div>
           <div class="check"><b>Checkpoint:</b> an empty <code>treaties</code> table exists with all the columns.</div>
@@ -428,19 +552,20 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step C2 — Build the "save" action</span><span class="owner">Data &amp; Database</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> an action that writes one treaty into the table.</div>
+          <div class="goal"><b>Goal:</b> an action that writes one treaty into the table. <span style="color:var(--muted)">(Uses Moves 4 &amp; 5.)</span></div>
           <ol class="steps">
-            <li>Back in the app, query panel → <b>+ New → Resource query</b> → <b>Resource: Retool Database</b>.</li>
-            <li>At the top of the query, switch to <b>GUI mode</b> (the toggle next to SQL). GUI mode lets you fill in boxes instead of writing code.</li>
-            <li><b>Action type:</b> <b>Insert a record</b>. <b>Table:</b> <code>treaties</code>.</li>
-            <li>In the <b>Changeset</b> (the field map), add each value:
+            <li>Go <b>back to your app</b>. At the bottom (query panel), click <b>+ New → Resource query</b>.</li>
+            <li>Open the <b>Resource</b> dropdown and choose <b>Retool Database</b>.</li>
+            <li>Near the top of the query, find the <b>GUI / SQL</b> toggle and set it to <b>GUI</b>. (GUI mode lets you fill in boxes instead of writing code.)</li>
+            <li>Set <b>Action type</b> to <b>Insert a record</b>, and set <b>Table</b> to <code>treaties</code>.</li>
+            <li>In the <b>Changeset</b> area, click <b>+ Add</b> once per field below. For each: pick the column name on the left, and paste its value on the right:
               <br><code>treaty_ref</code> = <code>{{ extractClean.value.treaty_reference }}</code>
               <br><code>cedent</code> = <code>{{ extractClean.value.cedent_name }}</code>
-              <br><code>source_file</code> = <code>{{ fileInput.files[0].name }}</code>
-              <br><code>status</code> = <code>in_review</code>
+              <br><code>source_file</code> = <code>{{ fileInput1.value[0].name }}</code>
+              <br><code>status</code> = <code>in_review</code> <span style="color:var(--muted)">(plain text, no braces)</span>
               <br><code>extracted_json</code> = <code>{{ extractClean.value }}</code>
               <br><code>rate_json</code> = <code>{{ rateTableClean.value }}</code></li>
-            <li>Rename the query to <code>insertTreaty</code>.</li>
+            <li>Rename the query (top-left) to <code>insertTreaty</code>.</li>
           </ol>
           <p><b>What this does:</b> saves one treaty as a new row, marked <code>in_review</code> (waiting for a person to check it).</p>
           <div class="check"><b>Checkpoint:</b> click Run once — a new row appears in your <code>treaties</code> table.</div>
@@ -450,11 +575,12 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step C3 — Make it save automatically (event handler)</span><span class="owner">Data &amp; Database</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the moment the AI finishes, the treaty is saved — no extra click.</div>
+          <div class="goal"><b>Goal:</b> the moment the AI finishes, the treaty is saved — no extra click. <span style="color:var(--muted)">(Uses Move 6.)</span></div>
           <ol class="steps">
-            <li>Open your <code>extractFields</code> query. In its settings, find <b>Event handlers</b>.</li>
-            <li>Click <b>+ Add</b>. Set <b>Event</b> to <b>Success</b>.</li>
-            <li>Set <b>Action</b> to <b>Control query → Trigger</b>, and choose <code>insertTreaty</code>.</li>
+            <li>At the bottom, <b>click your <code>extractFields</code> query</b> to open it.</li>
+            <li>In its settings, scroll down to <b>Event handlers</b> and click <b>+ Add</b>.</li>
+            <li>Set <b>Event</b> to <b>Success</b> (meaning "after this finishes without error").</li>
+            <li>Set <b>Action</b> to <b>Control query</b>, set the method to <b>Trigger</b>, and choose <code>insertTreaty</code>.</li>
           </ol>
           <p><b>What this does:</b> an event handler is a "when this, do that" rule. Here: <i>when the AI finishes reading the treaty, save it automatically.</i></p>
           <div class="check"><b>Checkpoint:</b> upload a fresh treaty and run extraction — a new row appears in <code>treaties</code> by itself.</div>
@@ -471,11 +597,14 @@ catch (e) { return { error: e.message }; }</pre>
       <details open>
         <summary><span>Step D1 — Show all treaties in a list</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> a table showing every saved treaty.</div>
+          <div class="goal"><b>Goal:</b> a table showing every saved treaty. <span style="color:var(--muted)">(Uses Moves 4, 1 &amp; 2.)</span></div>
           <ol class="steps">
-            <li>Query panel → <b>+ New → Resource query</b> → <b>Retool Database</b> → GUI mode → <b>Action: Read / Select</b> → <b>Table:</b> <code>treaties</code>. Name it <code>getTreaties</code>.</li>
-            <li>In the query's settings, turn on <b>Run on page load</b> so the list is always fresh.</li>
-            <li>Drag a <b>Table</b> onto the canvas, set <b>Data</b> to <code>{{ getTreaties.data }}</code>, and name it <code>treatiesTable</code>.</li>
+            <li>At the bottom (query panel), click <b>+ New → Resource query</b>.</li>
+            <li>Open the <b>Resource</b> dropdown → <b>Retool Database</b>. Set the <b>GUI / SQL</b> toggle to <b>GUI</b>.</li>
+            <li>Set <b>Action type</b> to <b>Read / Select</b> (sometimes "GET / Select") and <b>Table</b> to <code>treaties</code>.</li>
+            <li>Rename the query (top-left) to <code>getTreaties</code>.</li>
+            <li>In the query's settings, find <b>Run this query on page load</b> and switch it <b>on</b>, so the list is always up to date.</li>
+            <li>On the right, <b>drag a Table</b> onto the canvas. Set its <b>Data</b> to <code>{{ getTreaties.data }}</code> and rename it <code>treatiesTable</code>.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> your saved treaties appear in the list.</div>
         </div>
@@ -484,12 +613,14 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step D2 — Add the three status filters</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> buttons to switch between In Review, Approved, and All.</div>
+          <div class="goal"><b>Goal:</b> buttons to switch between In Review, Approved, and All. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
-            <li>Drag a <b>Segmented Control</b> above the table. Name it <code>statusFilter</code>.</li>
-            <li>Set its options to <b>In Review</b>, <b>Approved</b>, <b>All</b>. Set the default to <b>In Review</b>.</li>
-            <li>The simplest filter: on the <code>treatiesTable</code>, use its built-in <b>Filter</b> setting to show rows where <code>status</code> matches the control (treat "All" as no filter). Your coach can show you the exact box.</li>
+            <li>On the right, search <code>segmented</code> and <b>drag a Segmented Control</b> onto the canvas, just above the list table.</li>
+            <li>Click it. In the Inspector, find the <b>Values</b> (or "Options") setting and enter three: <b>In Review</b>, <b>Approved</b>, <b>All</b>.</li>
+            <li>Find <b>Default value</b> and set it to <b>In Review</b>. Rename the control to <code>statusFilter</code>.</li>
+            <li>Now filter the list: click <code>treatiesTable</code>, open its <b>Add filters</b> setting, and add a rule — show rows where <code>status</code> <b>is</b> <code>{{ statusFilter.value === 'All' ? undefined : statusFilter.value.toLowerCase().replace(' ', '_') }}</code>.</li>
           </ol>
+          <p style="font-size:14px;margin:6px 0 0"><b>What that snippet means:</b> the buttons say "In Review / Approved / All", but the database stores <code>in_review</code> / <code>approved</code>. The snippet turns the button text into the stored word (and shows everything when "All" is picked). If it feels fiddly, ask your coach — the idea is simply "match the button."</p>
           <p><b>What this does:</b> lets a reviewer focus on treaties still waiting for them (In Review) by default.</p>
           <div class="check"><b>Checkpoint:</b> switching the control changes which treaties show.</div>
         </div>
@@ -498,10 +629,12 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step D3 — Open a drawer when a row is clicked</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> click a treaty → a panel slides in from the right.</div>
+          <div class="goal"><b>Goal:</b> click a treaty → a panel slides in from the right. <span style="color:var(--muted)">(Uses Moves 1 &amp; 6.)</span></div>
           <ol class="steps">
-            <li>From the component list, add a <b>Drawer</b> frame. Name it <code>reviewDrawer</code>.</li>
-            <li>Select <code>treatiesTable</code> → <b>Event handlers → + Add</b> → <b>Event: Row clicked</b> (or "Select row") → <b>Action: Control component → Open</b> → choose <code>reviewDrawer</code>.</li>
+            <li>On the right, search <code>drawer</code> and <b>drag a Drawer</b> (a "frame" that slides in from the side) into your app. Rename it <code>reviewDrawer</code>.</li>
+            <li>Click <code>treatiesTable</code> to select it. In the Inspector, scroll to <b>Event handlers</b> and click <b>+ Add</b>.</li>
+            <li>Set <b>Event</b> to <b>Row clicked</b> (may be called "Select row").</li>
+            <li>Set <b>Action</b> to <b>Control component</b>, choose <code>reviewDrawer</code>, and set the method to <b>Open</b>.</li>
           </ol>
           <p><b>What this does:</b> the currently clicked treaty is available as <code>{{ treatiesTable.selectedRow }}</code> — you'll show its details inside the drawer next.</p>
           <div class="check"><b>Checkpoint:</b> clicking a row opens the (empty) drawer.</div>
@@ -511,12 +644,14 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step D4 — Two tabs inside the drawer</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for fields, one for the rate table.</div>
+          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for fields, one for the rate table. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
-            <li>Inside the drawer, add a <b>Tabbed Container</b>. Name the two tabs <b>Treaty parameters</b> and <b>Rate table</b>.</li>
-            <li>On the <b>Treaty parameters</b> tab, add a <b>Table</b> showing the selected treaty's fields (<code>{{ treatiesTable.selectedRow.extracted_json }}</code>).</li>
-            <li>On the <b>Rate table</b> tab, add a <b>Table</b> showing <code>{{ treatiesTable.selectedRow.rate_json }}</code>.</li>
-            <li>At the top of the drawer, add a <b>Text</b> title showing the treaty ref and an <b>Approve treaty</b> button (you'll wire it in Part E).</li>
+            <li>First, <b>click any treaty row</b> so the drawer is open while you build inside it.</li>
+            <li>On the right, search <code>tabs</code> and <b>drag a Tabbed Container</b> into the drawer. In the Inspector, set its two tab names to <b>Treaty parameters</b> and <b>Rate table</b>.</li>
+            <li>Click the <b>Treaty parameters</b> tab to make it active. <b>Drag a Table</b> into it and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.extracted_json }}</code>.</li>
+            <li>Click the <b>Rate table</b> tab. <b>Drag a Table</b> into that one and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.rate_json }}</code>.</li>
+            <li>At the top of the drawer, <b>drag a Text</b> component for the title and set its Value to <code>{{ treatiesTable.selectedRow.treaty_ref }}</code>.</li>
+            <li>Next to it, <b>drag a Button</b>, and in its <b>Text</b> setting type <b>Approve treaty</b>. (You'll wire it up in Part E.)</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> clicking a treaty shows its fields; switching to the second tab shows its rates.</div>
         </div>
@@ -532,9 +667,11 @@ catch (e) { return { error: e.message }; }</pre>
       <details open>
         <summary><span>Step E1 — Let reviewers edit the fields</span><span class="owner">Review &amp; Demo</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> a person can correct a wrong value on screen.</div>
+          <div class="goal"><b>Goal:</b> a person can correct a wrong value on screen. <span style="color:var(--muted)">(Uses Move 2.)</span></div>
           <ol class="steps">
-            <li>Select the fields Table in the drawer. In the Inspector, open the <b>value column's</b> settings and turn on <b>Editable</b>.</li>
+            <li>Click the fields Table inside the drawer (the one on the <b>Treaty parameters</b> tab) to select it.</li>
+            <li>In the Inspector, find the list of <b>Columns</b> and click the column that holds the <b>value</b>.</li>
+            <li>In that column's settings, find the <b>Editable</b> toggle and switch it <b>on</b>.</li>
           </ol>
           <p><b>What this does:</b> Retool automatically remembers every change the reviewer makes — you don't need to save each cell. The whole set is saved when they Approve.</p>
           <div class="check"><b>Checkpoint:</b> you can type a new value into the table.</div>
@@ -546,7 +683,9 @@ catch (e) { return { error: e.message }; }</pre>
         <div class="body">
           <div class="goal"><b>Goal:</b> stop obvious mistakes — blank required fields, wrong formats.</div>
           <ol class="steps">
-            <li>Query panel → <b>+ New → Transformer</b>. Name it <code>validate</code>. Paste the snippet below.</li>
+            <li>At the bottom (query panel), click <b>+ New</b>, then choose <b>Transformer</b>.</li>
+            <li>Rename it (top-left) to <code>validate</code>.</li>
+            <li><b>Select all</b> the sample code in the box, <b>delete it</b>, and paste the snippet below. It runs on its own.</li>
           </ol>
           <pre><span class="c">// returns ok:true only when the basics look right</span>
 const f = extractClean.value || {};
@@ -565,15 +704,19 @@ return { ok: problems.length === 0, problems };</pre>
       <details>
         <summary><span>Step E3 — The Approve button (save &amp; lock)</span><span class="owner">Data &amp; Database</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> Approve saves the checked values and marks the treaty Approved.</div>
+          <div class="goal"><b>Goal:</b> Approve saves the checked values and marks the treaty Approved. <span style="color:var(--muted)">(Uses Moves 4 &amp; 6.)</span></div>
           <ol class="steps">
-            <li>Query panel → <b>+ New → Resource query</b> → <b>Retool Database</b> → GUI mode → <b>Action: Update a record</b> → <b>Table:</b> <code>treaties</code>.</li>
-            <li><b>Filter by:</b> <code>id</code> equals <code>{{ treatiesTable.selectedRow.id }}</code> (this picks the right treaty).</li>
-            <li>In the changeset set: <code>status</code> = <code>approved</code>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code>, <code>rate_json</code> = <code>{{ rateTable.data }}</code>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
-            <li>Name it <code>updateTreaty</code>.</li>
-            <li>Select your <b>Approve treaty</b> button → <b>Event handlers → + Add → Event: Click → Action: Control query → Trigger <code>updateTreaty</code></b>.</li>
-            <li>On the button, set <b>Disabled</b> to <code>{{ !validate.value.ok }}</code> so it only works when the data passes.</li>
-            <li>On <code>updateTreaty</code>, add <b>Event handlers</b> for <b>Success</b>: trigger <code>getTreaties</code> (refresh the list), close <code>reviewDrawer</code>, and show a success notification.</li>
+            <li>At the bottom, click <b>+ New → Resource query</b>. Open <b>Resource → Retool Database</b> and set the <b>GUI / SQL</b> toggle to <b>GUI</b>.</li>
+            <li>Set <b>Action type</b> to <b>Update a record</b> and <b>Table</b> to <code>treaties</code>.</li>
+            <li>Find <b>Filter by</b> (or "Update where"): choose column <code>id</code>, operator <b>equals</b>, value <code>{{ treatiesTable.selectedRow.id }}</code>. (This picks the exact treaty you're viewing.)</li>
+            <li>In the <b>Changeset</b>, click <b>+ Add</b> for each: <code>status</code> = <code>approved</code> <span style="color:var(--muted)">(plain text)</span>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code>, <code>rate_json</code> = <code>{{ rateTable.data }}</code>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
+            <li>Rename the query (top-left) to <code>updateTreaty</code>.</li>
+            <li>Click your <b>Approve treaty</b> button to select it. In its <b>Event handlers</b>, click <b>+ Add</b> → Event <b>Click</b> → Action <b>Control query</b> → method <b>Trigger</b> → query <code>updateTreaty</code>.</li>
+            <li>With the button still selected, find its <b>Disabled</b> setting and paste <code>{{ !validate.value.ok }}</code>. (This greys the button out until the data passes the checks.)</li>
+            <li>Now open the <code>updateTreaty</code> query and add <b>three</b> Event handlers, each with Event <b>Success</b>:
+              <br>① Action <b>Control query → Trigger → <code>getTreaties</code></b> (refreshes the list),
+              <br>② Action <b>Control component → Close → <code>reviewDrawer</code></b> (closes the drawer),
+              <br>③ Action <b>Show notification</b> with text "Treaty approved".</li>
           </ol>
           <p><b>What this does:</b> saves the reviewer's checked values, flips the treaty to <b>Approved</b>, records who and when, then refreshes the list.</p>
           <div class="check"><b>Checkpoint:</b> click Approve — the drawer closes and the treaty now shows <b>Approved</b> in the list.</div>
@@ -583,10 +726,11 @@ return { ok: problems.length === 0, problems };</pre>
       <details>
         <summary><span>Step E4 — Export for the other systems</span><span class="owner">Review &amp; Demo</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> get the data out as a file for iRate / the ATF.</div>
+          <div class="goal"><b>Goal:</b> get the data out as a file for iRate / the ATF. <span style="color:var(--muted)">(Uses Moves 1 &amp; 6.)</span></div>
           <ol class="steps">
-            <li>On the rate table (or fields table), open the table's <b>⋯ menu</b> and use <b>Export data → CSV</b>.</li>
-            <li>Or add a <b>Button</b> named "Export" and, in its Click event, choose <b>Export data</b> and pick the table.</li>
+            <li>Click the rate table to select it. Look for its <b>⋯</b> (three-dots) menu — on the table's toolbar or in the Inspector.</li>
+            <li>Choose <b>Export data</b>, then pick <b>CSV</b> (or Excel). A file downloads to your computer.</li>
+            <li>Want a proper button instead? <b>Drag a Button</b>, set its <b>Text</b> to <b>Export</b>, then add an Event handler: Event <b>Click</b> → Action <b>Export data</b> → choose the table.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> you get a CSV/Excel file with the treaty's data.</div>
         </div>
