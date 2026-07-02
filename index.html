@@ -257,6 +257,50 @@
           </ol>
           <p><b>What this does:</b> reads the PDF and gives back its text. This step happens inside Retool — nothing is sent to an AI model yet.</p>
           <div class="check"><b>Checkpoint:</b> after Run, the treaty's text appears in the Text Area.</div>
+          <div class="callout warn" style="margin-top:12px"><p style="margin:0"><b>If "Convert document to text" isn't in the list</b>, that feature may not be switched on for the event. No problem — use <b>Plan B</b> below instead. Everything after this step works exactly the same.</p></div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step A2 (Plan B) — Read the PDF with a small script in a Workflow</span><span class="owner">AI &amp; Extraction</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> the same result as A2 — the treaty's text — but using a tiny script instead of the built-in AI action. Only do this if A2 wasn't available.</div>
+          <p><b>What's a Workflow?</b> It's a separate mini-program in Retool that runs a few steps in order, away from your app screen. We'll make one whose only job is: take the PDF, read its text, hand it back. Your app calls it like any other action.</p>
+          <ol class="steps">
+            <li>In Retool, go to <b>Create new → Workflow</b>. Name it <code>extractText</code>.</li>
+            <li>It starts with a <b>Start trigger</b> block. This is where your app will send the PDF.</li>
+            <li>Add a <b>Code block</b> and set its language to <b>Python</b>. Paste the script below into it.</li>
+            <li>Open the Workflow's <b>settings → Python libraries</b> and add <code>pypdf</code> (this is the tool that reads PDFs). If it's already there, skip this.</li>
+            <li>Back in your <b>app</b>: query panel → <b>+ New → Resource query</b> → choose your <code>extractText</code> <b>Workflow</b>. In its input, set <code>file</code> to <code>{{ fileInput.value[0] }}</code>. Name this query <code>extractText</code> and Run.</li>
+            <li>Show the result: a <b>Text Area</b> with Value <code>{{ extractText.data.text }}</code>.</li>
+          </ol>
+          <h4>Paste this into the Python code block</h4>
+          <pre><span class="c"># Reads the words out of the uploaded PDF</span>
+import base64, io
+from pypdf import PdfReader
+
+<span class="c"># 1. The app sends the PDF as base64 (a text-safe way to send a file).</span>
+raw = startTrigger.data["file"]
+
+<span class="c"># 2. Turn that text back into the real PDF file.</span>
+pdf_bytes = base64.b64decode(raw)
+
+<span class="c"># 3. Open the PDF and read the text from every page.</span>
+reader = PdfReader(io.BytesIO(pdf_bytes))
+pages = [(p.extract_text() or "") for p in reader.pages]
+
+<span class="c"># 4. Send all the text back to the app.</span>
+return {"text": "\n\n".join(pages)}</pre>
+          <p><b>What each part does, in plain words:</b></p>
+          <ul class="clean">
+            <li><b>import…</b> — brings in <code>pypdf</code>, the free tool that knows how to read PDFs.</li>
+            <li><b>Step 1</b> — grabs the file your app sent in.</li>
+            <li><b>Step 2</b> — files travel as scrambled text (called base64); this un-scrambles it back into a real PDF.</li>
+            <li><b>Step 3</b> — opens the PDF and pulls the words off each page.</li>
+            <li><b>Step 4</b> — joins the pages together and hands the text back to your app.</li>
+          </ul>
+          <div class="callout"><p style="margin:0"><b>One thing to remember:</b> later steps in this guide say to use <code>{{ convertDoc.data[0] }}</code>. If you used Plan B, use <code>{{ extractText.data.text }}</code> in those spots instead — it's the same treaty text, just from the Workflow.</p></div>
+          <div class="check"><b>Checkpoint:</b> the Text Area shows the treaty's text, just like in A2.</div>
         </div>
       </details>
     </section>
@@ -588,7 +632,9 @@ return { ok: problems.length === 0, problems };</pre>
         <div class="term"><b>Retool Database</b><p>A built-in place to store data in tables. Where treaties are saved.</p></div>
         <div class="term"><b>GUI mode</b><p>A way to build a database action by filling in boxes instead of writing code. You'll use this to save and update.</p></div>
         <div class="term"><b>AI action / Generate text</b><p>A query that asks an AI model to do something — here, pull the fields out of the treaty.</p></div>
-        <div class="term"><b>Convert document to text</b><p>The query that reads the words out of a PDF.</p></div>
+        <div class="term"><b>Convert document to text</b><p>The built-in AI query that reads the words out of a PDF. If it's not available, use the Workflow + Python "Plan B" in Step A2.</p></div>
+        <div class="term"><b>Workflow</b><p>A separate mini-program in Retool that runs a few steps in order, away from your app screen. We use one in Plan B to read the PDF's text with a small script.</p></div>
+        <div class="term"><b>pypdf (Python)</b><p>A free tool for reading PDFs. The Plan B Workflow uses it to pull the text out of a treaty. You just paste our script — no coding needed.</p></div>
         <div class="term"><b>Transformer</b><p>A small helper that tidies data so it displays neatly. You copy ours in.</p></div>
         <div class="term"><b>Event handler</b><p>A "when this happens, do that" rule. Example: when the AI finishes, save the treaty.</p></div>
         <div class="term"><b>On success</b><p>The kind of event handler that runs after a query finishes without an error.</p></div>
