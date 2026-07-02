@@ -441,16 +441,38 @@ return {"text": "\n\n".join(pages)}</pre>
             <li>At the <b>top-left</b> of the query, click its name and change it to <code>extractFields</code>.</li>
             <li>Click <b>Run</b> (the ▶ button, top-right of the query).</li>
           </ol>
+          <p style="font-size:14px">A treaty has one or more <b>plans</b>. Each plan has some <b>benefits</b>, and <b>each benefit has its own rate table</b>. We want <b>one row per plan</b>, and inside each plan a list of benefits — where every benefit carries its name <b>and</b> its rate table. So the AI returns a <b>list of plans</b>.</p>
           <h4>Paste into "System message"</h4>
-          <pre>You are a reinsurance treaty analyst. Read the treaty text and return
-ONLY a raw JSON object with these fields: treaty_name, cedent_name,
-effective_date, termination_date, treaty_type, quota_share_pct,
-retention_amount, currency, commission_pct.
-For each field also give a short "source_quote" copied from the text
-and a "confidence" of high, medium, or low.
-If a field is not in the text, use null. Do NOT use markdown or code fences.</pre>
+          <pre>You are a reinsurance treaty analyst. A treaty contains one or more PLANS.
+Each plan lists one or more BENEFITS, and each benefit has its own RATE TABLE.
+Extract EVERY plan. Return ONLY a raw JSON ARRAY (no markdown, no code fences)
+where each element is one plan with EXACTLY these keys:
+
+treaty_number, fg, treaty_id, amendment, plan_code, issue_date,
+term_date_of_nb, product_name, benefits, issue_age, waiting_period,
+claim_approval_limit, sum_assured, nar_used_in_rga_calculation, commission,
+ceding_type, ceding_retention, rga_share, rate_guarantee, retention_basis,
+aar_in_waiting_period, claim_in_waiting_period, coverage, channel, er,
+auto_binding_limits, reprem_collection_status, number_of_diseases,
+max_number_of_claims, number_of_disease_groups, jumbo_limit, claim_notice, notes
+
+"benefits" is an ARRAY OF OBJECTS. Each benefit object is:
+  {
+    "benefit_name": string,
+    "rate_table": [ { "age": number, "gender": "M" | "F" | null, "rate": number } ]
+  }
+- "rate_table" is the rate rows for THAT benefit. Use one row per rate cell.
+  If the treaty's table has more columns (smoker status, duration, policy year,
+  a rate per band), add them as extra keys using the treaty's exact header names.
+- Copy every number exactly. If a benefit has no rate table, use [].
+
+Other rules:
+- term_date_of_nb is also called Hi_Issue_Date.
+- claim_approval_limit is also called Ceding_Handling_Limit.
+- Copy values exactly. If a field is missing, use null. Never guess.</pre>
           <h4>Paste into "Prompt"</h4>
-          <pre>Extract the treaty fields from the text below.
+          <pre>Extract every plan, with each plan's benefits and each benefit's
+rate table, from the treaty text below.
 
 TREATY TEXT:
 {{ convertDoc.data[0] }}</pre>
@@ -489,26 +511,26 @@ catch (e) { return { error: e.message }; }</pre>
           <ol class="steps">
             <li>On the right (component library), search <code>table</code> and <b>drag a Table</b> onto the canvas.</li>
             <li>Click the table to select it. In the <b>Inspector</b> (right), find the <b>Data</b> box.</li>
-            <li>Clear the Data box and paste <code>{{ extractClean.value.fields }}</code> (or <code>{{ [extractClean.value] }}</code> if the AI returned one object instead of a list).</li>
+            <li>Clear the Data box and paste <code>{{ extractClean.value }}</code> — this is the <b>list of plans</b>, so you get one row per plan.</li>
             <li>At the <b>top of the Inspector</b>, rename the table to <code>paramsTable</code>.</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> the treaty's fields show up as rows in the table.</div>
+          <div class="check"><b>Checkpoint:</b> each plan shows up as a row. The <b>benefits</b> column holds a list of benefit objects (each has a name and its rate table).</div>
+          <div class="callout"><p style="margin:0"><b>Note:</b> the <code>benefits</code> column now holds a <b>list of objects</b>, not plain text — so it shows something like <code>[{benefit_name: …, rate_table: […]}]</code>. That's expected; you'll display benefits and their rate tables nicely in the drawer (Step B4 and Part D).</p></div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step B4 — Pull out the rate table</span><span class="owner">AI &amp; Extraction</span></summary>
+        <summary><span>Step B4 — Show a benefit's rate table</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the pricing grid (the rate table) comes out as its own table. <span style="color:var(--muted)">(Repeats B1–B3 for the rate table.)</span></div>
+          <div class="goal"><b>Goal:</b> pick a plan, see its benefits, and see the rate table for a benefit. <span style="color:var(--muted)">(No new AI query — the rates already came out inside each benefit.)</span></div>
+          <p>Because the prompt already pulls each benefit's rate table, you don't run a separate rate query — you just <b>display</b> what's nested inside the plan. You'll wire this in two little tables.</p>
           <ol class="steps">
-            <li>Make another query exactly like B1: <b>+ New → Resource query → Resource:</b> your AI resource → <b>Action: Generate text</b>. Rename it <code>extractRates</code>.</li>
-            <li>In its <b>System message</b> box, paste: <i>"Extract the rate table as a raw JSON array of rows, each with age_band, male_ns, male_sm, female_ns, female_sm. Copy numbers exactly. No markdown."</i></li>
-            <li>In its <b>Prompt</b> box, paste: <code>Extract the rate table.</code> then a blank line, then <code>TREATY TEXT:</code> and <code>{{ convertDoc.data[0] }}</code>. Click <b>Run</b>.</li>
-            <li>Make a <b>Transformer</b> (+ New → Transformer) named <code>rateTableClean</code>. Paste the same cleanup code from B2, but change the word <code>extractFields</code> to <code>extractRates</code> on the first line.</li>
-            <li><b>Drag a Table</b> onto the canvas, rename it <code>rateTable</code>, and set its <b>Data</b> to <code>{{ rateTableClean.value }}</code>.</li>
+            <li><b>Benefits table:</b> drag a <b>Table</b> onto the canvas, rename it <code>benefitsTable</code>, and set its <b>Data</b> to <code>{{ paramsTable.selectedRow.benefits }}</code>. (This shows the benefits of whichever plan is selected in <code>paramsTable</code>.)</li>
+            <li><b>Rate table:</b> drag another <b>Table</b>, rename it <code>rateTable</code>, and set its <b>Data</b> to <code>{{ benefitsTable.selectedRow.rate_table }}</code>. (This shows the rate rows for whichever benefit is selected.)</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> the rate grid appears as a table of numbers.</div>
-          <div class="callout"><p style="margin:0"><b>Tip:</b> the rate table is the trickiest bit. If it looks off, tell your coach — there's a simpler no-AI way to read a clean grid.</p></div>
+          <p><b>What this does:</b> click a plan → its benefits appear → click a benefit → its rate table appears. The rates were extracted in Step B1; here you're only showing them.</p>
+          <div class="check"><b>Checkpoint:</b> selecting a plan lists its benefits, and selecting a benefit shows that benefit's rate numbers.</div>
+          <div class="callout"><p style="margin:0"><b>Tip:</b> rate tables are the trickiest thing for the AI to get right. Spot-check a benefit's numbers against the treaty. If a table looks wrong or empty, tell your coach.</p></div>
         </div>
       </details>
     </section>
@@ -530,9 +552,9 @@ catch (e) { return { error: e.message }; }</pre>
             <div>cedent</div><div>text — the client company</div>
             <div>source_file</div><div>text — the uploaded file name</div>
             <div>status</div><div>text — either <code>in_review</code> or <code>approved</code></div>
-            <div>extracted_json</div><div>json — the AI's original answer (kept as-is)</div>
-            <div>reviewed_json</div><div>json — the human-checked answer</div>
-            <div>rate_json</div><div>json — the rate table</div>
+            <div>extracted_json</div><div>json — the AI's original answer: the list of plans (with benefits + rate tables inside)</div>
+            <div>reviewed_json</div><div>json — the human-checked version of the plans</div>
+            <div>rate_json</div><div>json — optional / can skip. Rates now live inside each benefit in <code>extracted_json</code>, so you don't need this column unless you want it</div>
             <div>reviewed_by</div><div>text — who approved it</div>
             <div>reviewed_at</div><div>timestamp — when it was approved</div>
             <div>created_at</div><div>timestamp — when it was first analysed</div>
@@ -559,15 +581,14 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Near the top of the query, find the <b>GUI / SQL</b> toggle and set it to <b>GUI</b>. (GUI mode lets you fill in boxes instead of writing code.)</li>
             <li>Set <b>Action type</b> to <b>Insert a record</b>, and set <b>Table</b> to <code>treaties</code>.</li>
             <li>In the <b>Changeset</b> area, click <b>+ Add</b> once per field below. For each: pick the column name on the left, and paste its value on the right:
-              <br><code>treaty_ref</code> = <code>{{ extractClean.value.treaty_reference }}</code>
-              <br><code>cedent</code> = <code>{{ extractClean.value.cedent_name }}</code>
+              <br><code>treaty_ref</code> = <code>{{ extractClean.value[0].treaty_number }}</code>
+              <br><code>cedent</code> = <code>{{ extractClean.value[0].product_name }}</code>
               <br><code>source_file</code> = <code>{{ fileInput1.value[0].name }}</code>
               <br><code>status</code> = <code>in_review</code> <span style="color:var(--muted)">(plain text, no braces)</span>
-              <br><code>extracted_json</code> = <code>{{ extractClean.value }}</code>
-              <br><code>rate_json</code> = <code>{{ rateTableClean.value }}</code></li>
+              <br><code>extracted_json</code> = <code>{{ extractClean.value }}</code></li>
             <li>Rename the query (top-left) to <code>insertTreaty</code>.</li>
           </ol>
-          <p><b>What this does:</b> saves one treaty as a new row, marked <code>in_review</code> (waiting for a person to check it).</p>
+          <p><b>What this does:</b> saves the whole uploaded treaty as one row, marked <code>in_review</code>. The <b>full list of plans — including every benefit and its rate table — is stored in <code>extracted_json</code></b>; <code>treaty_ref</code> and <code>cedent</code> are just quick labels for the list (taken from the first plan). <span style="color:var(--muted)">(The client's field list has no "cedent", so we show the product name there instead. There's no separate rate column — the rates live inside the plans.)</span></p>
           <div class="check"><b>Checkpoint:</b> click Run once — a new row appears in your <code>treaties</code> table.</div>
         </div>
       </details>
@@ -592,7 +613,56 @@ catch (e) { return { error: e.message }; }</pre>
     <section id="partD">
       <span class="eyebrow">Part D · owner: App &amp; Screens</span>
       <h2>7 · Part D — The treaty list &amp; review drawer</h2>
-      <p class="lead">Goal for this part: a list of every treaty, and clicking one opens a side panel (a "drawer") with two tabs — the fields, and the rate table.</p>
+      <p class="lead">Goal for this part: a list of every treaty, and clicking one opens a side panel (a "drawer") with two tabs — one for the plans, one for benefits &amp; their rate tables.</p>
+
+      <h4>Preview — this is what you're building (click a row, then switch the tabs)</h4>
+      <style>
+        .mockrow{cursor:pointer;transition:background .12s}
+        .mockrow:hover{background:var(--card2)}
+        .mockrow.sel{background:rgba(94,127,196,.14)}
+        .mocktab{cursor:pointer;user-select:none}
+      </style>
+      <div class="card" style="padding:14px">
+        <div class="tag" style="margin-bottom:6px">Treaty list</div>
+        <div class="badge-row" style="margin:0 0 10px"><span class="pill core">In Review · 2</span><span class="pill">Approved · 40</span><span class="pill">All</span></div>
+        <table style="margin:0">
+          <tr><th>Treaty ref</th><th>Product</th><th>Status</th></tr>
+          <tr class="mockrow" onclick="mockOpen(this)"><td>TRT-APAC-0042</td><td>Cedar CI Plan</td><td><span class="pill core">In Review</span></td></tr>
+          <tr class="mockrow" onclick="mockOpen(this)"><td>TRT-APAC-0039</td><td>Delta Life</td><td><span class="pill ok">Approved</span></td></tr>
+        </table>
+        <div id="mockHint" style="text-align:center;color:var(--muted);font-size:13px;padding:14px 0 2px">↑ click a treaty row to open its drawer</div>
+        <div id="mockDrawer" style="display:none;border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden">
+          <div style="background:var(--card2);padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <b>Drawer · TRT-APAC-0042 <span class="pill core" style="margin-left:6px">In Review</span></b>
+            <span><span class="pill">Reject</span> <span class="pill ok">✓ Approve</span> <span class="pill mocktab" onclick="mockClose()" title="close">✕</span></span>
+          </div>
+          <div style="padding:12px 14px">
+            <div class="badge-row" style="margin:0 0 10px"><span class="pill core mocktab" id="mockTabP" onclick="mockTab('p')">Plans</span><span class="pill mocktab" id="mockTabB" onclick="mockTab('b')">Benefits &amp; rates</span></div>
+            <div id="mockPaneP">
+              <table style="margin:0">
+                <tr><th>Plan code</th><th>Product</th><th>Benefits</th></tr>
+                <tr><td>P-001</td><td>Cedar CI Plan</td><td>3 benefits</td></tr>
+                <tr><td>P-002</td><td>Cedar CI Rider</td><td>2 benefits</td></tr>
+              </table>
+            </div>
+            <div id="mockPaneB" style="display:none">
+              <div class="tag" style="margin:0 0 4px">Benefits (click one)</div>
+              <table style="margin:0 0 10px">
+                <tr><th>Benefit</th></tr>
+                <tr><td>Critical Illness (major)</td></tr>
+                <tr><td>Moderate Illness</td></tr>
+              </table>
+              <div class="tag" style="margin:0 0 4px">Rate table for the selected benefit</div>
+              <table style="margin:0">
+                <tr><th>Age</th><th style="text-align:right">Male</th><th style="text-align:right">Female</th></tr>
+                <tr><td>30</td><td style="text-align:right">1.23</td><td style="text-align:right">0.98</td></tr>
+                <tr><td>40</td><td style="text-align:right">2.10</td><td style="text-align:right">1.66</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:13px">That's the finished shape. The steps below build it piece by piece.</p>
 
       <details open>
         <summary><span>Step D1 — Show all treaties in a list</span><span class="owner">App &amp; Screens</span></summary>
@@ -644,16 +714,17 @@ catch (e) { return { error: e.message }; }</pre>
       <details>
         <summary><span>Step D4 — Two tabs inside the drawer</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for fields, one for the rate table. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
+          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for the plans, one for benefits &amp; their rate tables. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
             <li>First, <b>click any treaty row</b> so the drawer is open while you build inside it.</li>
-            <li>On the right, search <code>tabs</code> and <b>drag a Tabbed Container</b> into the drawer. In the Inspector, set its two tab names to <b>Treaty parameters</b> and <b>Rate table</b>.</li>
-            <li>Click the <b>Treaty parameters</b> tab to make it active. <b>Drag a Table</b> into it and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.extracted_json }}</code>.</li>
-            <li>Click the <b>Rate table</b> tab. <b>Drag a Table</b> into that one and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.rate_json }}</code>.</li>
+            <li>On the right, search <code>tabs</code> and <b>drag a Tabbed Container</b> into the drawer. In the Inspector, set its two tab names to <b>Plans</b> and <b>Benefits &amp; rates</b>.</li>
+            <li>Click the <b>Plans</b> tab to make it active. <b>Drag a Table</b> into it, rename it <code>drawerPlans</code>, and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.extracted_json }}</code>. (This lists the plans in the selected treaty.)</li>
+            <li>Click the <b>Benefits &amp; rates</b> tab. <b>Drag a Table</b> into it, rename it <code>drawerBenefits</code>, and set its <b>Data</b> to <code>{{ drawerPlans.selectedRow.benefits }}</code>. (Benefits of whichever plan you clicked.)</li>
+            <li>In that same tab, <b>drag one more Table</b>, rename it <code>drawerRates</code>, and set its <b>Data</b> to <code>{{ drawerBenefits.selectedRow.rate_table }}</code>. (The rate table of whichever benefit you clicked.)</li>
             <li>At the top of the drawer, <b>drag a Text</b> component for the title and set its Value to <code>{{ treatiesTable.selectedRow.treaty_ref }}</code>.</li>
             <li>Next to it, <b>drag a Button</b>, and in its <b>Text</b> setting type <b>Approve treaty</b>. (You'll wire it up in Part E.)</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> clicking a treaty shows its fields; switching to the second tab shows its rates.</div>
+          <div class="check"><b>Checkpoint:</b> click a treaty → its plans show; click a plan → its benefits show; click a benefit → that benefit's rate table shows.</div>
         </div>
       </details>
     </section>
@@ -687,14 +758,19 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Rename it (top-left) to <code>validate</code>.</li>
             <li><b>Select all</b> the sample code in the box, <b>delete it</b>, and paste the snippet below. It runs on its own.</li>
           </ol>
-          <pre><span class="c">// returns ok:true only when the basics look right</span>
-const f = extractClean.value || {};
+          <pre><span class="c">// returns ok:true only when every plan has the basics</span>
+const plans = extractClean.value || [];
 const problems = [];
-if (!f.treaty_reference) problems.push("Missing treaty reference");
-if (!f.effective_date)   problems.push("Missing effective date");
-if (f.quota_share_pct != null &amp;&amp;
-    (f.quota_share_pct < 0 || f.quota_share_pct > 100))
-    problems.push("Quota share must be 0–100");
+if (!Array.isArray(plans) || plans.length === 0) {
+  problems.push("No plans were found");
+} else {
+  plans.forEach((p, i) =&gt; {
+    if (!p.plan_code)     problems.push("Plan " + (i+1) + ": missing plan_code");
+    if (!p.treaty_number) problems.push("Plan " + (i+1) + ": missing treaty_number");
+    if (!Array.isArray(p.benefits) || p.benefits.length === 0)
+      problems.push("Plan " + (i+1) + ": no benefits listed");
+  });
+}
 return { ok: problems.length === 0, problems };</pre>
           <p><b>What this does:</b> a simple checklist the app runs for you. If anything's wrong, <code>validate.value.problems</code> lists it.</p>
           <div class="check"><b>Checkpoint:</b> <code>validate.value.ok</code> is <code>true</code> for a good treaty.</div>
@@ -709,7 +785,7 @@ return { ok: problems.length === 0, problems };</pre>
             <li>At the bottom, click <b>+ New → Resource query</b>. Open <b>Resource → Retool Database</b> and set the <b>GUI / SQL</b> toggle to <b>GUI</b>.</li>
             <li>Set <b>Action type</b> to <b>Update a record</b> and <b>Table</b> to <code>treaties</code>.</li>
             <li>Find <b>Filter by</b> (or "Update where"): choose column <code>id</code>, operator <b>equals</b>, value <code>{{ treatiesTable.selectedRow.id }}</code>. (This picks the exact treaty you're viewing.)</li>
-            <li>In the <b>Changeset</b>, click <b>+ Add</b> for each: <code>status</code> = <code>approved</code> <span style="color:var(--muted)">(plain text)</span>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code>, <code>rate_json</code> = <code>{{ rateTable.data }}</code>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
+            <li>In the <b>Changeset</b>, click <b>+ Add</b> for each: <code>status</code> = <code>approved</code> <span style="color:var(--muted)">(plain text)</span>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code> <span style="color:var(--muted)">(the edited plans — benefits and rate tables are inside them)</span>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
             <li>Rename the query (top-left) to <code>updateTreaty</code>.</li>
             <li>Click your <b>Approve treaty</b> button to select it. In its <b>Event handlers</b>, click <b>+ Add</b> → Event <b>Click</b> → Action <b>Control query</b> → method <b>Trigger</b> → query <code>updateTreaty</code>.</li>
             <li>With the button still selected, find its <b>Disabled</b> setting and paste <code>{{ !validate.value.ok }}</code>. (This greys the button out until the data passes the checks.)</li>
@@ -733,6 +809,48 @@ return { ok: problems.length === 0, problems };</pre>
             <li>Want a proper button instead? <b>Drag a Button</b>, set its <b>Text</b> to <b>Export</b>, then add an Event handler: Event <b>Click</b> → Action <b>Export data</b> → choose the table.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> you get a CSV/Excel file with the treaty's data.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Step E5 — Export ALL your tables to one Excel file (a sheet each)</span><span class="owner">Data &amp; Database</span></summary>
+        <div class="body">
+          <div class="goal"><b>Goal:</b> one button that downloads a single Excel workbook — <b>one sheet per table</b> (Plans, Benefits, Rates…).</div>
+          <p>Retool builds multi-sheet Excel with a small free tool called <b>SheetJS</b>. Set it up once, then it's one button.</p>
+          <ol class="steps">
+            <li>Add the tool: go to your app's <b>Settings → Libraries</b>, click <b>+ Add</b>, and paste this URL:<br><code>https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js</code><br>This gives you something called <code>XLSX</code> to use.</li>
+            <li>At the bottom (query panel), click <b>+ New → JavaScript query</b>. Rename it <code>exportExcel</code>.</li>
+            <li>Delete the sample code and paste the code below.</li>
+            <li>Drag a <b>Button</b> onto the canvas, set its <b>Text</b> to <b>Export to Excel</b>, and add an Event handler: Event <b>Click</b> → Action <b>Control query → Trigger</b> → <code>exportExcel</code>.</li>
+          </ol>
+          <h4>Paste this into the JavaScript query</h4>
+          <pre><span class="c">// ───────── EDIT THIS PART ─────────</span>
+<span class="c">// One const per table. The team changes these once you know your tables.</span>
+const table1 = paramsTable.data;      <span class="c">// the plans table</span>
+const table2 = benefitsTable.data;    <span class="c">// the benefits table</span>
+const table3 = rateTable.data;        <span class="c">// the rate table</span>
+<span class="c">// Add more when you have more: const table4 = someTable.data;</span>
+
+<span class="c">// Give each one a sheet name (left) and point it at a table (right).</span>
+const SHEETS = {
+  "Plans":    table1,
+  "Benefits": table2,
+  "Rates":    table3,
+  <span class="c">// "Sheet name": table4,</span>
+};
+<span class="c">// ──────── you can stop editing here ────────</span>
+
+const wb = XLSX.utils.book_new();                       <span class="c">// new empty workbook</span>
+Object.entries(SHEETS).forEach(([name, rows]) =&gt; {
+  const ws = XLSX.utils.json_to_sheet(rows || []);      <span class="c">// table -> sheet</span>
+  XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31)); <span class="c">// names max 31 chars</span>
+});
+
+const base64 = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");</pre>
+          <p><b>How to change it later:</b> you only edit the top part. Each <code>tableN</code> const points at one of your tables (its name <code>.data</code>), and each line in <code>SHEETS</code> is <code>"Sheet name": tableN</code>. Add a line for every table you want in the file, or delete ones you don't need — the sheet name is whatever you type on the left.</p>
+          <div class="check"><b>Checkpoint:</b> click the button — an <code>.xlsx</code> file downloads with one tab per table.</div>
+          <div class="callout"><p style="margin:0"><b>If the download doesn't start:</b> some Retool setups want a slightly different last line — <code>utils.downloadFile(base64, "treaty_export", "xlsx")</code>. Try that, or ask your coach; everything above it stays the same.</p></div>
         </div>
       </details>
 
@@ -783,7 +901,8 @@ return { ok: problems.length === 0, problems };</pre>
         <div class="term"><b>Event handler</b><p>A "when this happens, do that" rule. Example: when the AI finishes, save the treaty.</p></div>
         <div class="term"><b>On success</b><p>The kind of event handler that runs after a query finishes without an error.</p></div>
         <div class="term"><b>Drawer</b><p>A panel that slides in from the side to show details — here, a treaty's fields and rates.</p></div>
-        <div class="term"><b>Tabs (Tabbed Container)</b><p>A component with switchable tabs. You use two: Treaty parameters and Rate table.</p></div>
+        <div class="term"><b>Tabs (Tabbed Container)</b><p>A component with switchable tabs. In the drawer you use two: Plans, and Benefits &amp; rates.</p></div>
+        <div class="term"><b>SheetJS (XLSX)</b><p>A free tool you add once (a Library) that lets the app build an Excel file with multiple sheets. Used in the "Export to Excel" step.</p></div>
         <div class="term"><b>Segmented Control</b><p>A row of buttons for picking one option — here, In Review / Approved / All.</p></div>
         <div class="term"><b>JSON</b><p>A tidy way to write data as labelled values. The AI returns its answer as JSON; you rarely read it directly.</p></div>
         <div class="term"><b>Validation</b><p>Automatic checks that the data looks right before it's approved.</p></div>
@@ -856,6 +975,27 @@ return { ok: problems.length === 0, problems };</pre>
     });
   }
   setTeam(3);
+
+  // interactive preview (drawer + tabs)
+  function mockOpen(row){
+    document.getElementById('mockDrawer').style.display='block';
+    document.getElementById('mockHint').style.display='none';
+    document.querySelectorAll('.mockrow').forEach(function(r){r.classList.remove('sel')});
+    if(row) row.classList.add('sel');
+    mockTab('p');
+  }
+  function mockClose(){
+    document.getElementById('mockDrawer').style.display='none';
+    document.getElementById('mockHint').style.display='block';
+    document.querySelectorAll('.mockrow').forEach(function(r){r.classList.remove('sel')});
+  }
+  function mockTab(t){
+    var p=document.getElementById('mockPaneP'), b=document.getElementById('mockPaneB');
+    var tp=document.getElementById('mockTabP'), tb=document.getElementById('mockTabB');
+    var on=t==='p';
+    p.style.display=on?'':'none'; b.style.display=on?'none':'';
+    tp.className='pill mocktab'+(on?' core':''); tb.className='pill mocktab'+(on?'':' core');
+  }
 
   // glossary filter
   function filterTerms(){
