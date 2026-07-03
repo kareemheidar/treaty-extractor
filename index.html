@@ -280,9 +280,9 @@
       <p class="lead">Five parts. After each part you'll have something that works, so you're never far from a demo. Tick things off as you go — the bar at the top fills up.</p>
       <div class="kv">
         <div>Part A · Upload &amp; read</div><div>Upload a treaty and turn the PDF into text.</div>
-        <div>Part B · Extract with AI</div><div>Ask the AI to pull out the fields and the rate table; tidy them into tables.</div>
+        <div>Part B · Extract with AI</div><div>Ask the AI to pull out the products and their benefits; tidy them into tables.</div>
         <div>Part C · Save to database</div><div>Design the storage table; save each treaty automatically as "In review".</div>
-        <div>Part D · List &amp; review</div><div>Show all treaties in a list; click one to open a drawer with two tabs.</div>
+        <div>Part D · List &amp; review</div><div>Show all treaties; click one → a drawer shows its products, and each product's benefits.</div>
         <div>Part E · Approve &amp; export</div><div>Edit, check, Approve (locks it), and export for the other systems.</div>
       </div>
       <div class="progress-wrap" style="margin-top:16px"><div class="bar"><i id="bar"></i></div></div>
@@ -438,15 +438,17 @@ return {"text": "\n\n".join(pages)}</pre>
             <li>Find the <b>Model</b> dropdown and pick the Claude model your admin enabled (for example <code>claude-sonnet-4-6</code>).</li>
             <li>Find the box labelled <b>System message</b> and paste the first block below into it (this tells the AI exactly what to give back).</li>
             <li>Find the box labelled <b>Prompt</b> (sometimes "User message") and paste the second block below.</li>
-            <li>At the <b>top-left</b> of the query, click its name and change it to <code>extractFields</code>.</li>
+            <li>At the <b>top-left</b> of the query, click its name and change it to <code>extractProducts</code>.</li>
             <li>Click <b>Run</b> (the ▶ button, top-right of the query).</li>
           </ol>
-          <p style="font-size:14px">A treaty has one or more <b>plans</b>. Each plan has some <b>benefits</b>, and <b>each benefit has its own rate table</b>. We want <b>one row per plan</b>, and inside each plan a list of benefits — where every benefit carries its name <b>and</b> its rate table. So the AI returns a <b>list of plans</b>.</p>
+          <p style="font-size:14px">A treaty (addendum) covers a few <b>products</b> (the client's sample has 3). It has <b>one benefit table</b> that lists the <b>benefits</b>, and those same benefits apply to every product. We want <b>one row per product</b>, and inside each product the shared list of benefits. So the AI returns a <b>list of products</b>.</p>
           <h4>Paste into "System message"</h4>
-          <pre>You are a reinsurance treaty analyst. A treaty contains one or more PLANS.
-Each plan lists one or more BENEFITS, and each benefit has its own RATE TABLE.
-Extract EVERY plan. Return ONLY a raw JSON ARRAY (no markdown, no code fences)
-where each element is one plan with EXACTLY these keys:
+          <pre>You are a reinsurance treaty analyst. A treaty (addendum) covers one or more
+PRODUCTS. It has ONE benefit table listing the BENEFITS, and those benefits
+apply to EVERY product in the addendum.
+
+Extract EVERY product. Return ONLY a raw JSON ARRAY (no markdown, no code
+fences) where each element is one product with EXACTLY these keys:
 
 treaty_number, fg, treaty_id, amendment, plan_code, issue_date,
 term_date_of_nb, product_name, benefits, issue_age, waiting_period,
@@ -456,81 +458,96 @@ aar_in_waiting_period, claim_in_waiting_period, coverage, channel, er,
 auto_binding_limits, reprem_collection_status, number_of_diseases,
 max_number_of_claims, number_of_disease_groups, jumbo_limit, claim_notice, notes
 
-"benefits" is an ARRAY OF OBJECTS. Each benefit object is:
+"benefits" is an ARRAY OF OBJECTS taken from the treaty's benefit table.
+Attach the SAME benefit list to every product. Each benefit object is:
   {
-    "benefit_name": string,
-    "rate_table": [ { "age": number, "gender": "M" | "F" | null, "rate": number } ]
+    "benefit_name": string,                    // "Reinsured Benefits" column
+    "calculation_of_net_risk_amount": string,  // "Calculation of Policy Net Amount at Risk"
+    "collection_waiver_of_reprem": string,     // "Collection and waiver of reinsurance premium"
+    "table": string                            // the "Table" column, e.g. "Table 1"
   }
-- "rate_table" is the rate rows for THAT benefit. Use one row per rate cell.
-  If the treaty's table has more columns (smoker status, duration, policy year,
-  a rate per band), add them as extra keys using the treaty's exact header names.
-- Copy every number exactly. If a benefit has no rate table, use [].
+Do NOT invent "commission" or "rate_table_id" — those get added afterwards.
 
-Other rules:
+Rules:
 - term_date_of_nb is also called Hi_Issue_Date.
 - claim_approval_limit is also called Ceding_Handling_Limit.
-- Copy values exactly. If a field is missing, use null. Never guess.</pre>
+- Keep the original language of the text. If a field is missing, use null. Never guess.</pre>
           <h4>Paste into "Prompt"</h4>
-          <pre>Extract every plan, with each plan's benefits and each benefit's
-rate table, from the treaty text below.
+          <pre>Extract every product and the shared benefit table from the
+treaty text below.
 
 TREATY TEXT:
 {{ convertDoc.data[0] }}</pre>
-          <p><b>What this does:</b> the AI reads the text and hands back the details as data your app can display.</p>
-          <div class="check"><b>Checkpoint:</b> after Run, the query's Output area (bottom) shows the fields with values.</div>
+          <p><b>What this does:</b> the AI reads the text and returns the products, each carrying the list of benefits (name, net-risk calculation, reprem collection/waiver, and which rate table applies).</p>
+          <div class="check"><b>Checkpoint:</b> after Run, the Output area shows a list of products, each with a <code>benefits</code> list inside.</div>
         </div>
       </details>
 
       <details>
         <summary><span>Step B2 — Tidy the AI's answer (a transformer)</span><span class="owner">AI &amp; Extraction</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> make sure the AI's answer is always clean, even if it adds extra formatting.</div>
+          <div class="goal"><b>Goal:</b> clean the AI's answer <b>and</b> add the two columns the treaty's benefit table doesn't have — <code>commission</code> and <code>rate_table_id</code>.</div>
+          <p>The treaty's benefit table is missing three columns: <b>product name</b> (we get that from the selected product later), <b>commission</b> (each benefit inherits it from its product), and <b>rate_table_id</b> (built from the amendment + the table number). This transformer fills the last two in automatically.</p>
           <ol class="steps">
-            <li>At the <b>bottom</b> (query panel), click <b>+ New</b>, then choose <b>Transformer</b> (not Resource query this time).</li>
+            <li>At the <b>bottom</b> (query panel), click <b>+ New</b>, then choose <b>Transformer</b>.</li>
             <li>At the <b>top-left</b>, rename it to <code>extractClean</code>.</li>
-            <li>You'll see a code box with some sample text. <b>Select all of it and delete it</b>, then paste the snippet below.</li>
-            <li>It runs on its own — no Run button needed. Look at the <b>Output</b> underneath to see the tidied result.</li>
+            <li><b>Select all</b> the sample code, <b>delete it</b>, and paste the snippet below.</li>
+            <li>It runs on its own. Look at the <b>Output</b> underneath — each benefit now has a <code>commission</code> and a <code>rate_table_id</code>.</li>
           </ol>
-          <pre><span class="c">// cleans the AI answer so it always works</span>
-let raw = extractFields.data;
-if (raw && typeof raw === 'object') return raw;
-let s = String(raw).trim()
-        .replace(/^```[a-z]*\s*/i, '')
-        .replace(/\s*```$/, '').trim();
-try { return JSON.parse(s); }
-catch (e) { return { error: e.message }; }</pre>
-          <p><b>Why this exists:</b> sometimes the AI wraps its answer in extra symbols. This helper quietly removes them so your table never breaks. You don't need to understand the code — just paste it.</p>
-          <div class="check"><b>Checkpoint:</b> the transformer's output shows a clean set of fields.</div>
+          <pre><span class="c">// 1) clean the AI answer, then 2) add commission + rate_table_id per benefit</span>
+let raw = extractProducts.data;                 <span class="c">// your Generate text query</span>
+let products;
+if (raw &amp;&amp; typeof raw === 'object') products = raw;
+else {
+  const s = String(raw).trim()
+      .replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '').trim();
+  try { products = JSON.parse(s); } catch (e) { return { error: e.message }; }
+}
+if (!Array.isArray(products)) return [];
+
+return products.map(p =&gt; ({
+  ...p,
+  benefits: (p.benefits || []).map(b =&gt; {
+    const n = (String(b.table || '').match(/\d+/) || [''])[0];   <span class="c">// "Table 1" -&gt; "1"</span>
+    return {
+      ...b,
+      commission: b.commission ?? p.commission ?? null,          <span class="c">// inherit from product</span>
+      rate_table_id: b.rate_table_id
+        ?? (p.amendment &amp;&amp; n ? p.amendment + "_RT" + n + "_M" : null)  <span class="c">// e.g. Addendum_11_RT1_M</span>
+    };
+  })
+}));</pre>
+          <p><b>Why this exists:</b> it removes any extra symbols the AI adds <i>and</i> quietly fills the two missing columns so your benefits table is complete. Just paste it. <span style="color:var(--muted)">(If you named your Generate-text query something other than <code>extractProducts</code>, change that one word on line 2.)</span></p>
+          <div class="check"><b>Checkpoint:</b> the output shows the products, and every benefit now has a <code>commission</code> and a <code>rate_table_id</code> (like <code>Addendum_11_RT1_M</code>).</div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step B3 — Show the fields in a table</span><span class="owner">App &amp; Screens</span></summary>
+        <summary><span>Step B3 — Show the products in a table</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> the fields appear on screen in a table people can read. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
+          <div class="goal"><b>Goal:</b> the products appear on screen in a table (this is the <b>product_info</b> sheet). <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
             <li>On the right (component library), search <code>table</code> and <b>drag a Table</b> onto the canvas.</li>
             <li>Click the table to select it. In the <b>Inspector</b> (right), find the <b>Data</b> box.</li>
-            <li>Clear the Data box and paste <code>{{ extractClean.value }}</code> — this is the <b>list of plans</b>, so you get one row per plan.</li>
-            <li>At the <b>top of the Inspector</b>, rename the table to <code>paramsTable</code>.</li>
+            <li>Clear the Data box and paste <code>{{ extractClean.value }}</code> — this is the <b>list of products</b>, so you get one row per product (the sample has 3).</li>
+            <li>At the <b>top of the Inspector</b>, rename the table to <code>productsTable</code>.</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> each plan shows up as a row. The <b>benefits</b> column holds a list of benefit objects (each has a name and its rate table).</div>
-          <div class="callout"><p style="margin:0"><b>Note:</b> the <code>benefits</code> column now holds a <b>list of objects</b>, not plain text — so it shows something like <code>[{benefit_name: …, rate_table: […]}]</code>. That's expected; you'll display benefits and their rate tables nicely in the drawer (Step B4 and Part D).</p></div>
+          <div class="check"><b>Checkpoint:</b> each product shows up as a row. There's a <code>benefits</code> column that holds a list — you'll show that nicely in the drawer next.</div>
+          <div class="callout"><p style="margin:0"><b>Tidy tip:</b> the products table has 30+ columns. In the Inspector you can <b>hide the ones you don't need on the main screen</b> (like the long <code>benefits</code> list) — the data is still there for the drawer.</p></div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step B4 — Show a benefit's rate table</span><span class="owner">App &amp; Screens</span></summary>
+        <summary><span>Step B4 — Show a product's benefits (quick check)</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> pick a plan, see its benefits, and see the rate table for a benefit. <span style="color:var(--muted)">(No new AI query — the rates already came out inside each benefit.)</span></div>
-          <p>Because the prompt already pulls each benefit's rate table, you don't run a separate rate query — you just <b>display</b> what's nested inside the plan. You'll wire this in two little tables.</p>
+          <div class="goal"><b>Goal:</b> click a product → see its benefits, so you can confirm the AI worked. (The polished drawer version comes in Part D — this is just a quick check.) <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
-            <li><b>Benefits table:</b> drag a <b>Table</b> onto the canvas, rename it <code>benefitsTable</code>, and set its <b>Data</b> to <code>{{ paramsTable.selectedRow.benefits }}</code>. (This shows the benefits of whichever plan is selected in <code>paramsTable</code>.)</li>
-            <li><b>Rate table:</b> drag another <b>Table</b>, rename it <code>rateTable</code>, and set its <b>Data</b> to <code>{{ benefitsTable.selectedRow.rate_table }}</code>. (This shows the rate rows for whichever benefit is selected.)</li>
+            <li>On the right, search <code>table</code> and <b>drag a second Table</b> onto the canvas, under the products table.</li>
+            <li>Rename it <code>benefitsTable</code>. Set its <b>Data</b> to <code>{{ productsTable.selectedRow.benefits }}</code>.</li>
+            <li>Now <b>click a product row</b> in <code>productsTable</code> — the benefits of that product fill the benefits table.</li>
           </ol>
-          <p><b>What this does:</b> click a plan → its benefits appear → click a benefit → its rate table appears. The rates were extracted in Step B1; here you're only showing them.</p>
-          <div class="check"><b>Checkpoint:</b> selecting a plan lists its benefits, and selecting a benefit shows that benefit's rate numbers.</div>
-          <div class="callout"><p style="margin:0"><b>Tip:</b> rate tables are the trickiest thing for the AI to get right. Spot-check a benefit's numbers against the treaty. If a table looks wrong or empty, tell your coach.</p></div>
+          <p><b>What you should see:</b> the benefits table has columns for <code>benefit_name</code>, <code>calculation_of_net_risk_amount</code>, <code>collection_waiver_of_reprem</code>, <code>table</code>, <b><code>commission</code></b>, and <b><code>rate_table_id</code></b> — the last two filled in by the transformer in Step B2. (Product name isn't here on purpose; it comes from the selected product.)</p>
+          <div class="check"><b>Checkpoint:</b> clicking a product shows its benefits, and every benefit has a commission and a rate_table_id.</div>
         </div>
       </details>
     </section>
@@ -545,20 +562,20 @@ catch (e) { return { error: e.message }; }</pre>
         <summary><span>Step C1 — Design &amp; create the storage table</span><span class="owner">Data &amp; Database</span></summary>
         <div class="body">
           <div class="goal"><b>Goal:</b> a table (like a spreadsheet with rules) to hold every treaty.</div>
-          <p>First, decide what to store. A table has <b>columns</b> (the kinds of information) and <b>rows</b> (one per treaty). Here's the design — build exactly this:</p>
+          <p>We store <b>one row per uploaded treaty</b>, and keep the whole extraction (all products, each with its benefits) inside one <code>json</code> column. This is the fastest design and it matches the app perfectly — the products table and the drawer read from that column. Build exactly this:</p>
           <div class="kv">
             <div>id</div><div>auto number — the unique key (Retool adds this for you)</div>
-            <div>treaty_ref</div><div>text — the treaty's reference code</div>
-            <div>cedent</div><div>text — the client company</div>
+            <div>treaty_ref</div><div>text — a label for the list (we'll use the first product's amendment)</div>
+            <div>cedent</div><div>text — a label for the list (we'll use the first product's name)</div>
             <div>source_file</div><div>text — the uploaded file name</div>
             <div>status</div><div>text — either <code>in_review</code> or <code>approved</code></div>
-            <div>extracted_json</div><div>json — the AI's original answer: the list of plans (with benefits + rate tables inside)</div>
-            <div>reviewed_json</div><div>json — the human-checked version of the plans</div>
-            <div>rate_json</div><div>json — optional / can skip. Rates now live inside each benefit in <code>extracted_json</code>, so you don't need this column unless you want it</div>
+            <div>extracted_json</div><div>json — the AI's answer: the <b>list of products</b>, each with its <b>benefits</b> inside (this holds both sheets)</div>
+            <div>reviewed_json</div><div>json — the human-checked version of the products</div>
             <div>reviewed_by</div><div>text — who approved it</div>
             <div>reviewed_at</div><div>timestamp — when it was approved</div>
             <div>created_at</div><div>timestamp — when it was first analysed</div>
           </div>
+          <div class="callout"><p style="margin:0"><b>Why one json column instead of many?</b> The two output sheets — <b>product_info</b> and <b>benefit_rate_set</b> — are naturally nested (each product has benefits). Storing them together as <code>extracted_json</code> means the app can show products in a table and benefits in the drawer with zero extra plumbing. <span style="color:var(--muted)">(If you ever want proper separate tables, the "next step" version is two tables: <code>products</code>, and <code>benefits</code> with a <code>product_id</code> link — but that's not needed for the hackathon.)</span></p></div>
           <ol class="steps" style="margin-top:14px">
             <li>Leave the app for a moment. In the <b>far-left sidebar</b> of Retool, click <b>Retool Database</b> (a database/cylinder icon). Can't spot it? Ask your coach to point at it.</li>
             <li>Click <b>Create new → Table</b>. In the name box, type <code>treaties</code>.</li>
@@ -581,14 +598,14 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Near the top of the query, find the <b>GUI / SQL</b> toggle and set it to <b>GUI</b>. (GUI mode lets you fill in boxes instead of writing code.)</li>
             <li>Set <b>Action type</b> to <b>Insert a record</b>, and set <b>Table</b> to <code>treaties</code>.</li>
             <li>In the <b>Changeset</b> area, click <b>+ Add</b> once per field below. For each: pick the column name on the left, and paste its value on the right:
-              <br><code>treaty_ref</code> = <code>{{ extractClean.value[0].treaty_number }}</code>
+              <br><code>treaty_ref</code> = <code>{{ extractClean.value[0].amendment }}</code> <span style="color:var(--muted)">(e.g. Addendum_11)</span>
               <br><code>cedent</code> = <code>{{ extractClean.value[0].product_name }}</code>
               <br><code>source_file</code> = <code>{{ fileInput1.value[0].name }}</code>
               <br><code>status</code> = <code>in_review</code> <span style="color:var(--muted)">(plain text, no braces)</span>
               <br><code>extracted_json</code> = <code>{{ extractClean.value }}</code></li>
             <li>Rename the query (top-left) to <code>insertTreaty</code>.</li>
           </ol>
-          <p><b>What this does:</b> saves the whole uploaded treaty as one row, marked <code>in_review</code>. The <b>full list of plans — including every benefit and its rate table — is stored in <code>extracted_json</code></b>; <code>treaty_ref</code> and <code>cedent</code> are just quick labels for the list (taken from the first plan). <span style="color:var(--muted)">(The client's field list has no "cedent", so we show the product name there instead. There's no separate rate column — the rates live inside the plans.)</span></p>
+          <p><b>What this does:</b> saves the whole uploaded treaty as one row, marked <code>in_review</code>. The <b>full list of products — with every product's benefits inside — is stored in <code>extracted_json</code></b>; <code>treaty_ref</code> and <code>cedent</code> are just quick labels for the list (taken from the first product). <span style="color:var(--muted)">(The client's field list has no "cedent", so we show the product name there instead.)</span></p>
           <div class="check"><b>Checkpoint:</b> click Run once — a new row appears in your <code>treaties</code> table.</div>
         </div>
       </details>
@@ -598,7 +615,7 @@ catch (e) { return { error: e.message }; }</pre>
         <div class="body">
           <div class="goal"><b>Goal:</b> the moment the AI finishes, the treaty is saved — no extra click. <span style="color:var(--muted)">(Uses Move 6.)</span></div>
           <ol class="steps">
-            <li>At the bottom, <b>click your <code>extractFields</code> query</b> to open it.</li>
+            <li>At the bottom, <b>click your <code>extractProducts</code> query</b> to open it.</li>
             <li>In its settings, scroll down to <b>Event handlers</b> and click <b>+ Add</b>.</li>
             <li>Set <b>Event</b> to <b>Success</b> (meaning "after this finishes without error").</li>
             <li>Set <b>Action</b> to <b>Control query</b>, set the method to <b>Trigger</b>, and choose <code>insertTreaty</code>.</li>
@@ -613,9 +630,9 @@ catch (e) { return { error: e.message }; }</pre>
     <section id="partD">
       <span class="eyebrow">Part D · owner: App &amp; Screens</span>
       <h2>7 · Part D — The treaty list &amp; review drawer</h2>
-      <p class="lead">Goal for this part: a list of every treaty, and clicking one opens a side panel (a "drawer") with two tabs — one for the plans, one for benefits &amp; their rate tables.</p>
+      <p class="lead">Goal for this part: a list of every saved treaty. Click one → a drawer opens showing that treaty's <b>products</b>; click a product → its <b>benefits</b> appear (with commission &amp; rate table id).</p>
 
-      <h4>Preview — this is what you're building (click a row, then switch the tabs)</h4>
+      <h4>Preview — this is what you're building (click a treaty, then a product)</h4>
       <style>
         .mockrow{cursor:pointer;transition:background .12s}
         .mockrow:hover{background:var(--card2)}
@@ -626,37 +643,29 @@ catch (e) { return { error: e.message }; }</pre>
         <div class="tag" style="margin-bottom:6px">Treaty list</div>
         <div class="badge-row" style="margin:0 0 10px"><span class="pill core">In Review · 2</span><span class="pill">Approved · 40</span><span class="pill">All</span></div>
         <table style="margin:0">
-          <tr><th>Treaty ref</th><th>Product</th><th>Status</th></tr>
-          <tr class="mockrow" onclick="mockOpen(this)"><td>TRT-APAC-0042</td><td>Cedar CI Plan</td><td><span class="pill core">In Review</span></td></tr>
-          <tr class="mockrow" onclick="mockOpen(this)"><td>TRT-APAC-0039</td><td>Delta Life</td><td><span class="pill ok">Approved</span></td></tr>
+          <tr><th>Treaty ref</th><th>First product</th><th>Status</th></tr>
+          <tr class="mockrow" onclick="mockOpen(this)"><td>Addendum_11</td><td>测试产品C…</td><td><span class="pill core">In Review</span></td></tr>
+          <tr class="mockrow" onclick="mockOpen(this)"><td>Addendum_07</td><td>测试产品A…</td><td><span class="pill ok">Approved</span></td></tr>
         </table>
         <div id="mockHint" style="text-align:center;color:var(--muted);font-size:13px;padding:14px 0 2px">↑ click a treaty row to open its drawer</div>
         <div id="mockDrawer" style="display:none;border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden">
           <div style="background:var(--card2);padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <b>Drawer · TRT-APAC-0042 <span class="pill core" style="margin-left:6px">In Review</span></b>
+            <b>Drawer · Addendum_11 <span class="pill core" style="margin-left:6px">In Review</span></b>
             <span><span class="pill">Reject</span> <span class="pill ok">✓ Approve</span> <span class="pill mocktab" onclick="mockClose()" title="close">✕</span></span>
           </div>
           <div style="padding:12px 14px">
-            <div class="badge-row" style="margin:0 0 10px"><span class="pill core mocktab" id="mockTabP" onclick="mockTab('p')">Plans</span><span class="pill mocktab" id="mockTabB" onclick="mockTab('b')">Benefits &amp; rates</span></div>
-            <div id="mockPaneP">
-              <table style="margin:0">
-                <tr><th>Plan code</th><th>Product</th><th>Benefits</th></tr>
-                <tr><td>P-001</td><td>Cedar CI Plan</td><td>3 benefits</td></tr>
-                <tr><td>P-002</td><td>Cedar CI Rider</td><td>2 benefits</td></tr>
-              </table>
-            </div>
-            <div id="mockPaneB" style="display:none">
-              <div class="tag" style="margin:0 0 4px">Benefits (click one)</div>
-              <table style="margin:0 0 10px">
-                <tr><th>Benefit</th></tr>
-                <tr><td>Critical Illness (major)</td></tr>
-                <tr><td>Moderate Illness</td></tr>
-              </table>
-              <div class="tag" style="margin:0 0 4px">Rate table for the selected benefit</div>
-              <table style="margin:0">
-                <tr><th>Age</th><th style="text-align:right">Male</th><th style="text-align:right">Female</th></tr>
-                <tr><td>30</td><td style="text-align:right">1.23</td><td style="text-align:right">0.98</td></tr>
-                <tr><td>40</td><td style="text-align:right">2.10</td><td style="text-align:right">1.66</td></tr>
+            <div class="tag" style="margin:0 0 4px">Products in this treaty — the product_info sheet</div>
+            <table style="margin:0 0 12px">
+              <tr><th>Product name</th><th>Amendment</th><th>Ceding type</th></tr>
+              <tr><td>测试产品C款重大疾病保险</td><td>Addendum_11</td><td>AUTO</td></tr>
+              <tr><td>测试产品D款重大疾病保险</td><td>Addendum_11</td><td>AUTO</td></tr>
+            </table>
+            <div class="tag" style="margin:0 0 4px">Benefits of the selected product — the benefit_rate_set sheet</div>
+            <div style="overflow-x:auto">
+              <table style="margin:0;min-width:640px">
+                <tr><th>Benefit</th><th>Net risk calc</th><th>Reprem</th><th>Table</th><th>Commission</th><th>Rate table id</th></tr>
+                <tr><td>首次重大疾病保险金</td><td>100% BSA – Reserve</td><td>Till Death/TPD…</td><td>Table 1</td><td>NONE</td><td>Addendum_11_RT1_M</td></tr>
+                <tr><td>中症疾病保险金</td><td>60% BSA</td><td>Till MSCI ends</td><td>Table 2</td><td>NONE</td><td>Addendum_11_RT2_M</td></tr>
               </table>
             </div>
           </div>
@@ -673,7 +682,7 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Open the <b>Resource</b> dropdown → <b>Retool Database</b>. Set the <b>GUI / SQL</b> toggle to <b>GUI</b>.</li>
             <li>Set <b>Action type</b> to <b>Read / Select</b> (sometimes "GET / Select") and <b>Table</b> to <code>treaties</code>.</li>
             <li>Rename the query (top-left) to <code>getTreaties</code>.</li>
-            <li>In the query's settings, find <b>Run this query on page load</b> and switch it <b>on</b>, so the list is always up to date.</li>
+            <li>In the query's settings, find <b>Run this query on page load</b> and switch it <b>on</b>.</li>
             <li>On the right, <b>drag a Table</b> onto the canvas. Set its <b>Data</b> to <code>{{ getTreaties.data }}</code> and rename it <code>treatiesTable</code>.</li>
           </ol>
           <div class="check"><b>Checkpoint:</b> your saved treaties appear in the list.</div>
@@ -690,41 +699,38 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Find <b>Default value</b> and set it to <b>In Review</b>. Rename the control to <code>statusFilter</code>.</li>
             <li>Now filter the list: click <code>treatiesTable</code>, open its <b>Add filters</b> setting, and add a rule — show rows where <code>status</code> <b>is</b> <code>{{ statusFilter.value === 'All' ? undefined : statusFilter.value.toLowerCase().replace(' ', '_') }}</code>.</li>
           </ol>
-          <p style="font-size:14px;margin:6px 0 0"><b>What that snippet means:</b> the buttons say "In Review / Approved / All", but the database stores <code>in_review</code> / <code>approved</code>. The snippet turns the button text into the stored word (and shows everything when "All" is picked). If it feels fiddly, ask your coach — the idea is simply "match the button."</p>
-          <p><b>What this does:</b> lets a reviewer focus on treaties still waiting for them (In Review) by default.</p>
+          <p style="font-size:14px;margin:6px 0 0"><b>What that snippet means:</b> the buttons say "In Review / Approved / All", but the database stores <code>in_review</code> / <code>approved</code>. The snippet turns the button text into the stored word (and shows everything for "All"). If it feels fiddly, ask your coach.</p>
           <div class="check"><b>Checkpoint:</b> switching the control changes which treaties show.</div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step D3 — Open a drawer when a row is clicked</span><span class="owner">App &amp; Screens</span></summary>
+        <summary><span>Step D3 — Open a drawer when a treaty is clicked</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
           <div class="goal"><b>Goal:</b> click a treaty → a panel slides in from the right. <span style="color:var(--muted)">(Uses Moves 1 &amp; 6.)</span></div>
           <ol class="steps">
-            <li>On the right, search <code>drawer</code> and <b>drag a Drawer</b> (a "frame" that slides in from the side) into your app. Rename it <code>reviewDrawer</code>.</li>
+            <li>On the right, search <code>drawer</code> and <b>drag a Drawer</b> into your app. Rename it <code>reviewDrawer</code>.</li>
             <li>Click <code>treatiesTable</code> to select it. In the Inspector, scroll to <b>Event handlers</b> and click <b>+ Add</b>.</li>
             <li>Set <b>Event</b> to <b>Row clicked</b> (may be called "Select row").</li>
-            <li>Set <b>Action</b> to <b>Control component</b>, choose <code>reviewDrawer</code>, and set the method to <b>Open</b>.</li>
+            <li>Set <b>Action</b> to <b>Control component</b>, choose <code>reviewDrawer</code>, method <b>Open</b>.</li>
           </ol>
-          <p><b>What this does:</b> the currently clicked treaty is available as <code>{{ treatiesTable.selectedRow }}</code> — you'll show its details inside the drawer next.</p>
-          <div class="check"><b>Checkpoint:</b> clicking a row opens the (empty) drawer.</div>
+          <p><b>What this does:</b> the clicked treaty is now available as <code>{{ treatiesTable.selectedRow }}</code> — you'll show its products inside the drawer next.</p>
+          <div class="check"><b>Checkpoint:</b> clicking a treaty opens the (empty) drawer.</div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step D4 — Two tabs inside the drawer</span><span class="owner">App &amp; Screens</span></summary>
+        <summary><span>Step D4 — Products &amp; benefits inside the drawer</span><span class="owner">App &amp; Screens</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> keep the drawer tidy — one tab for the plans, one for benefits &amp; their rate tables. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
+          <div class="goal"><b>Goal:</b> the drawer shows the treaty's <b>products</b>; clicking a product shows its <b>benefits</b>. <span style="color:var(--muted)">(Uses Moves 1, 2 &amp; 3.)</span></div>
           <ol class="steps">
             <li>First, <b>click any treaty row</b> so the drawer is open while you build inside it.</li>
-            <li>On the right, search <code>tabs</code> and <b>drag a Tabbed Container</b> into the drawer. In the Inspector, set its two tab names to <b>Plans</b> and <b>Benefits &amp; rates</b>.</li>
-            <li>Click the <b>Plans</b> tab to make it active. <b>Drag a Table</b> into it, rename it <code>drawerPlans</code>, and set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.extracted_json }}</code>. (This lists the plans in the selected treaty.)</li>
-            <li>Click the <b>Benefits &amp; rates</b> tab. <b>Drag a Table</b> into it, rename it <code>drawerBenefits</code>, and set its <b>Data</b> to <code>{{ drawerPlans.selectedRow.benefits }}</code>. (Benefits of whichever plan you clicked.)</li>
-            <li>In that same tab, <b>drag one more Table</b>, rename it <code>drawerRates</code>, and set its <b>Data</b> to <code>{{ drawerBenefits.selectedRow.rate_table }}</code>. (The rate table of whichever benefit you clicked.)</li>
-            <li>At the top of the drawer, <b>drag a Text</b> component for the title and set its Value to <code>{{ treatiesTable.selectedRow.treaty_ref }}</code>.</li>
-            <li>Next to it, <b>drag a Button</b>, and in its <b>Text</b> setting type <b>Approve treaty</b>. (You'll wire it up in Part E.)</li>
+            <li>At the top of the drawer, <b>drag a Text</b> for the title; set its Value to <code>{{ treatiesTable.selectedRow.treaty_ref }}</code>. Add a <b>Button</b> with Text <b>Approve treaty</b> (wired up in Part E).</li>
+            <li><b>Products table:</b> <b>drag a Table</b> into the drawer, rename it <code>drawerProducts</code>, set its <b>Data</b> to <code>{{ treatiesTable.selectedRow.extracted_json }}</code>. (These are the treaty's products — the <b>product_info</b> sheet.)</li>
+            <li><b>Benefits table:</b> <b>drag another Table</b> into the drawer, under the first, rename it <code>drawerBenefits</code>, set its <b>Data</b> to <code>{{ drawerProducts.selectedRow.benefits }}</code>. (The selected product's benefits — the <b>benefit_rate_set</b> sheet, including commission &amp; rate_table_id.)</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> click a treaty → its plans show; click a plan → its benefits show; click a benefit → that benefit's rate table shows.</div>
+          <p><b>What this does:</b> click a treaty → its products show; click a product → its benefits show. Product name isn't repeated in the benefits table — it's the product row you clicked.</p>
+          <div class="check"><b>Checkpoint:</b> treaty → products → (click a product) → benefits with all six columns.</div>
         </div>
       </details>
     </section>
@@ -758,17 +764,16 @@ catch (e) { return { error: e.message }; }</pre>
             <li>Rename it (top-left) to <code>validate</code>.</li>
             <li><b>Select all</b> the sample code in the box, <b>delete it</b>, and paste the snippet below. It runs on its own.</li>
           </ol>
-          <pre><span class="c">// returns ok:true only when every plan has the basics</span>
-const plans = extractClean.value || [];
+          <pre><span class="c">// returns ok:true only when every product has the basics</span>
+const products = extractClean.value || [];
 const problems = [];
-if (!Array.isArray(plans) || plans.length === 0) {
-  problems.push("No plans were found");
+if (!Array.isArray(products) || products.length === 0) {
+  problems.push("No products were found");
 } else {
-  plans.forEach((p, i) =&gt; {
-    if (!p.plan_code)     problems.push("Plan " + (i+1) + ": missing plan_code");
-    if (!p.treaty_number) problems.push("Plan " + (i+1) + ": missing treaty_number");
+  products.forEach((p, i) =&gt; {
+    if (!p.product_name) problems.push("Product " + (i+1) + ": missing product_name");
     if (!Array.isArray(p.benefits) || p.benefits.length === 0)
-      problems.push("Plan " + (i+1) + ": no benefits listed");
+      problems.push("Product " + (i+1) + ": no benefits listed");
   });
 }
 return { ok: problems.length === 0, problems };</pre>
@@ -785,7 +790,7 @@ return { ok: problems.length === 0, problems };</pre>
             <li>At the bottom, click <b>+ New → Resource query</b>. Open <b>Resource → Retool Database</b> and set the <b>GUI / SQL</b> toggle to <b>GUI</b>.</li>
             <li>Set <b>Action type</b> to <b>Update a record</b> and <b>Table</b> to <code>treaties</code>.</li>
             <li>Find <b>Filter by</b> (or "Update where"): choose column <code>id</code>, operator <b>equals</b>, value <code>{{ treatiesTable.selectedRow.id }}</code>. (This picks the exact treaty you're viewing.)</li>
-            <li>In the <b>Changeset</b>, click <b>+ Add</b> for each: <code>status</code> = <code>approved</code> <span style="color:var(--muted)">(plain text)</span>, <code>reviewed_json</code> = <code>{{ paramsTable.data }}</code> <span style="color:var(--muted)">(the edited plans — benefits and rate tables are inside them)</span>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
+            <li>In the <b>Changeset</b>, click <b>+ Add</b> for each: <code>status</code> = <code>approved</code> <span style="color:var(--muted)">(plain text)</span>, <code>reviewed_json</code> = <code>{{ drawerProducts.data }}</code> <span style="color:var(--muted)">(the edited products — benefits are inside them)</span>, <code>reviewed_by</code> = <code>{{ current_user.email }}</code>, <code>reviewed_at</code> = <code>{{ new Date().toISOString() }}</code>.</li>
             <li>Rename the query (top-left) to <code>updateTreaty</code>.</li>
             <li>Click your <b>Approve treaty</b> button to select it. In its <b>Event handlers</b>, click <b>+ Add</b> → Event <b>Click</b> → Action <b>Control query</b> → method <b>Trigger</b> → query <code>updateTreaty</code>.</li>
             <li>With the button still selected, find its <b>Disabled</b> setting and paste <code>{{ !validate.value.ok }}</code>. (This greys the button out until the data passes the checks.)</li>
@@ -802,20 +807,20 @@ return { ok: problems.length === 0, problems };</pre>
       <details>
         <summary><span>Step E4 — Export for the other systems</span><span class="owner">Review &amp; Demo</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> get the data out as a file for iRate / the ATF. <span style="color:var(--muted)">(Uses Moves 1 &amp; 6.)</span></div>
+          <div class="goal"><b>Goal:</b> get one table out as a file (for a quick check). <span style="color:var(--muted)">(Uses Moves 1 &amp; 6.)</span> The full two-sheet export is Step E5.</div>
           <ol class="steps">
-            <li>Click the rate table to select it. Look for its <b>⋯</b> (three-dots) menu — on the table's toolbar or in the Inspector.</li>
+            <li>Click the benefits table to select it. Look for its <b>⋯</b> (three-dots) menu — on the table's toolbar or in the Inspector.</li>
             <li>Choose <b>Export data</b>, then pick <b>CSV</b> (or Excel). A file downloads to your computer.</li>
             <li>Want a proper button instead? <b>Drag a Button</b>, set its <b>Text</b> to <b>Export</b>, then add an Event handler: Event <b>Click</b> → Action <b>Export data</b> → choose the table.</li>
           </ol>
-          <div class="check"><b>Checkpoint:</b> you get a CSV/Excel file with the treaty's data.</div>
+          <div class="check"><b>Checkpoint:</b> you get a CSV/Excel file with that table's data.</div>
         </div>
       </details>
 
       <details>
-        <summary><span>Step E5 — Export ALL your tables to one Excel file (a sheet each)</span><span class="owner">Data &amp; Database</span></summary>
+        <summary><span>Step E5 — Export to Excel: product_info + benefit_rate_set (a sheet each)</span><span class="owner">Data &amp; Database</span></summary>
         <div class="body">
-          <div class="goal"><b>Goal:</b> one button that downloads a single Excel workbook — <b>one sheet per table</b> (Plans, Benefits, Rates…).</div>
+          <div class="goal"><b>Goal:</b> one button that downloads a single Excel workbook matching the client's output — a <b>product_info</b> sheet and a <b>benefit_rate_set</b> sheet.</div>
           <p>Retool builds multi-sheet Excel with a small free tool called <b>SheetJS</b>. Set it up once, then it's one button.</p>
           <ol class="steps">
             <li>Add the tool: go to your app's <b>Settings → Libraries</b>, click <b>+ Add</b>, and paste this URL:<br><code>https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js</code><br>This gives you something called <code>XLSX</code> to use.</li>
@@ -825,31 +830,31 @@ return { ok: problems.length === 0, problems };</pre>
           </ol>
           <h4>Paste this into the JavaScript query</h4>
           <pre><span class="c">// ───────── EDIT THIS PART ─────────</span>
-<span class="c">// One const per table. The team changes these once you know your tables.</span>
-const table1 = paramsTable.data;      <span class="c">// the plans table</span>
-const table2 = benefitsTable.data;    <span class="c">// the benefits table</span>
-const table3 = rateTable.data;        <span class="c">// the rate table</span>
-<span class="c">// Add more when you have more: const table4 = someTable.data;</span>
-
-<span class="c">// Give each one a sheet name (left) and point it at a table (right).</span>
-const SHEETS = {
-  "Plans":    table1,
-  "Benefits": table2,
-  "Rates":    table3,
-  <span class="c">// "Sheet name": table4,</span>
-};
+<span class="c">// Where the products come from. Use the review drawer's products,</span>
+<span class="c">// or the live extraction (extractClean.value) if you're testing.</span>
+const products = drawerProducts.data || extractClean.value || [];
 <span class="c">// ──────── you can stop editing here ────────</span>
+
+<span class="c">// Sheet 1 (product_info): the products, without the nested benefits column.</span>
+const product_info = products.map(({ benefits, ...p }) =&gt; p);
+
+<span class="c">// Sheet 2 (benefit_rate_set): every benefit, tagged with its product name.</span>
+const benefit_rate_set = products.flatMap(p =&gt;
+  (p.benefits || []).map(b =&gt; ({ product_name: p.product_name, ...b }))
+);
+
+const SHEETS = { "product_info": product_info, "benefit_rate_set": benefit_rate_set };
 
 const wb = XLSX.utils.book_new();                       <span class="c">// new empty workbook</span>
 Object.entries(SHEETS).forEach(([name, rows]) =&gt; {
-  const ws = XLSX.utils.json_to_sheet(rows || []);      <span class="c">// table -> sheet</span>
+  const ws = XLSX.utils.json_to_sheet(rows || []);      <span class="c">// data -> sheet</span>
   XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31)); <span class="c">// names max 31 chars</span>
 });
 
 const base64 = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
 utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");</pre>
-          <p><b>How to change it later:</b> you only edit the top part. Each <code>tableN</code> const points at one of your tables (its name <code>.data</code>), and each line in <code>SHEETS</code> is <code>"Sheet name": tableN</code>. Add a line for every table you want in the file, or delete ones you don't need — the sheet name is whatever you type on the left.</p>
-          <div class="check"><b>Checkpoint:</b> click the button — an <code>.xlsx</code> file downloads with one tab per table.</div>
+          <p><b>Why the flatten?</b> Benefits live <i>inside</i> each product. The <code>benefit_rate_set</code> sheet needs one row per benefit with its product name, so we spread the products out into a flat list. <b>To add more sheets later:</b> add another line to <code>SHEETS</code> — <code>"sheet name": someArray</code>.</p>
+          <div class="check"><b>Checkpoint:</b> click the button — an <code>.xlsx</code> downloads with a <b>product_info</b> tab and a <b>benefit_rate_set</b> tab (including commission &amp; rate_table_id).</div>
           <div class="callout"><p style="margin:0"><b>If the download doesn't start:</b> some Retool setups want a slightly different last line — <code>utils.downloadFile(base64, "treaty_export", "xlsx")</code>. Try that, or ask your coach; everything above it stays the same.</p></div>
         </div>
       </details>
@@ -866,7 +871,7 @@ utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");
       <div class="grid g2">
         <div class="card"><h4>Group things in Containers</h4><p style="margin:6px 0 0">Drag a <b>Container</b> around related components and give it a title (e.g. "Upload", "All treaties"). Instantly tidier.</p></div>
         <div class="card"><h4>Colour the status column</h4><p style="margin:6px 0 0">On the list table, set the <code>status</code> column type to <b>Tag</b> — Retool colours the values, so Approved/In Review stand out.</p></div>
-        <div class="card"><h4>Right-align the numbers</h4><p style="margin:6px 0 0">In the rate table, set the number columns' alignment to <b>right</b> so the decimals line up and read cleanly.</p></div>
+        <div class="card"><h4>Show benefit names as tags</h4><p style="margin:6px 0 0">In the products table, the <code>benefits</code> column is a list — set its type to <b>Tags</b> so it shows neat chips instead of raw text.</p></div>
         <div class="card"><h4>Add a title bar</h4><p style="margin:6px 0 0">Put a <b>Text</b> component at the top: "Treaty Extractor". Big heading style. Gives the app an identity.</p></div>
         <div class="card"><h4>Friendly labels</h4><p style="margin:6px 0 0">Rename buttons and headings in plain words ("Approve treaty", "All treaties"). Use normal sentence case, not ALL CAPS.</p></div>
         <div class="card"><h4>Change the theme colour</h4><p style="margin:6px 0 0"><b>Settings → Appearance</b> lets you pick one accent colour that applies everywhere — far easier than styling each piece.</p></div>
@@ -886,7 +891,11 @@ utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");
         <div class="term"><b>Treaty</b><p>The reinsurance contract your app reads. Signed between an insurer and a reinsurer (RGA).</p></div>
         <div class="term"><b>ATF</b><p>The admin form/record where the treaty's details need to be entered. One place your data feeds into.</p></div>
         <div class="term"><b>iRate</b><p>A pricing tool the rate tables get uploaded into. The other place your data feeds into.</p></div>
-        <div class="term"><b>Rate table</b><p>The grid of pricing numbers inside a treaty (rates by age, sex, smoker). Your app pulls this out too.</p></div>
+        <div class="term"><b>product_info</b><p>The first output sheet — one row per product, with all the product fields. Your products table.</p></div>
+        <div class="term"><b>benefit_rate_set</b><p>The second output sheet — one row per benefit (net-risk calc, reprem, table, commission, rate_table_id). Shown in the drawer per product.</p></div>
+        <div class="term"><b>rate_table_id</b><p>A code that points a benefit to its rate table, like <code>Addendum_11_RT1_M</code>. It's built automatically from the amendment + the table number (the transformer does it).</p></div>
+        <div class="term"><b>Row action</b><p>A little button on each table row (e.g. "Details"). Clicking it can open the drawer for that row.</p></div>
+        <div class="term"><b>Rate table</b><p>The grid of pricing numbers by age/gender. For this hackathon we don't extract the grids themselves — benefits just carry a <code>rate_table_id</code> pointing to them.</p></div>
         <div class="term"><b>App</b><p>The screen you're building in Retool — buttons, tables, and boxes.</p></div>
         <div class="term"><b>Component</b><p>A drag-on piece: a table, a button, a file upload, a text box.</p></div>
         <div class="term"><b>Query</b><p>An action the app runs: read a file, ask the AI, save to the database.</p></div>
@@ -901,7 +910,7 @@ utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");
         <div class="term"><b>Event handler</b><p>A "when this happens, do that" rule. Example: when the AI finishes, save the treaty.</p></div>
         <div class="term"><b>On success</b><p>The kind of event handler that runs after a query finishes without an error.</p></div>
         <div class="term"><b>Drawer</b><p>A panel that slides in from the side to show details — here, a treaty's fields and rates.</p></div>
-        <div class="term"><b>Tabs (Tabbed Container)</b><p>A component with switchable tabs. In the drawer you use two: Plans, and Benefits &amp; rates.</p></div>
+        <div class="term"><b>Tabs (Tabbed Container)</b><p>A component with switchable tabs — an optional way to organise a busy drawer. (This build keeps the drawer simple with two stacked tables instead.)</p></div>
         <div class="term"><b>SheetJS (XLSX)</b><p>A free tool you add once (a Library) that lets the app build an Excel file with multiple sheets. Used in the "Export to Excel" step.</p></div>
         <div class="term"><b>Segmented Control</b><p>A row of buttons for picking one option — here, In Review / Approved / All.</p></div>
         <div class="term"><b>JSON</b><p>A tidy way to write data as labelled values. The AI returns its answer as JSON; you rarely read it directly.</p></div>
@@ -976,25 +985,17 @@ utils.downloadFile({ data: { base64Binary: base64 } }, "treaty_export", "xlsx");
   }
   setTeam(3);
 
-  // interactive preview (drawer + tabs)
+  // interactive preview (treaty -> drawer with products + benefits)
   function mockOpen(row){
     document.getElementById('mockDrawer').style.display='block';
     document.getElementById('mockHint').style.display='none';
     document.querySelectorAll('.mockrow').forEach(function(r){r.classList.remove('sel')});
     if(row) row.classList.add('sel');
-    mockTab('p');
   }
   function mockClose(){
     document.getElementById('mockDrawer').style.display='none';
     document.getElementById('mockHint').style.display='block';
     document.querySelectorAll('.mockrow').forEach(function(r){r.classList.remove('sel')});
-  }
-  function mockTab(t){
-    var p=document.getElementById('mockPaneP'), b=document.getElementById('mockPaneB');
-    var tp=document.getElementById('mockTabP'), tb=document.getElementById('mockTabB');
-    var on=t==='p';
-    p.style.display=on?'':'none'; b.style.display=on?'none':'';
-    tp.className='pill mocktab'+(on?' core':''); tb.className='pill mocktab'+(on?'':' core');
   }
 
   // glossary filter
